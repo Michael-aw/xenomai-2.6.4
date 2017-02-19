@@ -1,0 +1,4619 @@
+From 0e1cba62d01447777405ad2fa93366bca45c8278 Mon Sep 17 00:00:00 2001
+From: xielinfei <xielinfei@allwinnertech.com>
+Date: Fri, 17 Feb 2017 15:42:48 +0800
+Subject: [PATCH 2/2] rti2c: suport sunxi rtdm i2c driver
+
+Signed-off-by: xielinfei <xielinfei@allwinnertech.com>
+---
+ include/cobalt/kernel/rtdm/i2c.h      |   26 +
+ include/rtdm/Makefile.am              |    4 +
+ include/rtdm/Makefile.in              |    2 +
+ include/rtdm/i2c.h                    |   25 +
+ include/rtdm/i2c_uapi.h               |   36 +
+ include/rtdm/rtdm.h                   |    1 +
+ ksrc/drivers/Kconfig                  |    1 +
+ ksrc/drivers/Makefile                 |    3 +-
+ ksrc/drivers/i2c/Kconfig              |   29 +
+ ksrc/drivers/i2c/Makefile             |    9 +
+ ksrc/drivers/i2c/README               |  180 ++++
+ ksrc/drivers/i2c/busses/i2c-sunxi.h   |  240 ++++++
+ ksrc/drivers/i2c/busses/rti2c-sunxi.c | 1505 +++++++++++++++++++++++++++++++++
+ ksrc/drivers/i2c/rti2c-dev.c          |  816 ++++++++++++++++++
+ ksrc/drivers/i2c/rti2c-omap.c         | 1327 +++++++++++++++++++++++++++++
+ ksrc/drivers/i2c/rti2c.h              |  101 +++
+ scripts/build.sh                      |  140 +++
+ 17 files changed, 4444 insertions(+), 1 deletion(-)
+ create mode 100644 include/cobalt/kernel/rtdm/i2c.h
+ create mode 100644 include/rtdm/i2c.h
+ create mode 100644 include/rtdm/i2c_uapi.h
+ create mode 100644 ksrc/drivers/i2c/Kconfig
+ create mode 100644 ksrc/drivers/i2c/Makefile
+ create mode 100644 ksrc/drivers/i2c/README
+ create mode 100644 ksrc/drivers/i2c/busses/i2c-sunxi.h
+ create mode 100644 ksrc/drivers/i2c/busses/rti2c-sunxi.c
+ create mode 100644 ksrc/drivers/i2c/rti2c-dev.c
+ create mode 100644 ksrc/drivers/i2c/rti2c-omap.c
+ create mode 100644 ksrc/drivers/i2c/rti2c.h
+ create mode 100755 scripts/build.sh
+
+diff --git a/include/cobalt/kernel/rtdm/i2c.h b/include/cobalt/kernel/rtdm/i2c.h
+new file mode 100644
+index 0000000..87f2c92
+--- /dev/null
++++ b/include/cobalt/kernel/rtdm/i2c.h
+@@ -0,0 +1,26 @@
++/**
++ * @file
++ * @note Copyright (C) 2014 Matthias Schneider <ma30002000@yahoo.de>
++ *
++ * Xenomai is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * Xenomai is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with Xenomai; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#ifndef _COBALT_RTDM_I2C_H
++#define _COBALT_RTDM_I2C_H
++
++#include <rtdm/rtdm.h>
++#include <rtdm/uapi/i2c.h>
++
++#endif /* !_COBALT_RTDM_I2C_H */
+diff --git a/include/rtdm/Makefile.am b/include/rtdm/Makefile.am
+index f7cbe73..88df512 100644
+--- a/include/rtdm/Makefile.am
++++ b/include/rtdm/Makefile.am
+@@ -8,5 +8,9 @@ includesub_HEADERS = \
+ 	rtdm_driver.h \
+ 	rtserial.h \
+ 	rttesting.h \
++	i2c.h \
++	i2c_uapi.h \
+ 	rtcan.h \
+ 	rtipc.h
++
++SUBDIRS=uapi
+diff --git a/include/rtdm/Makefile.in b/include/rtdm/Makefile.in
+index df1ae65..cb03e2c 100644
+--- a/include/rtdm/Makefile.in
++++ b/include/rtdm/Makefile.in
+@@ -271,6 +271,8 @@ includesub_HEADERS = \
+ 	rtdm_driver.h \
+ 	rtserial.h \
+ 	rttesting.h \
++	i2c.h \
++	i2c_uapi.h \
+ 	rtcan.h \
+ 	rtipc.h
+ 
+diff --git a/include/rtdm/i2c.h b/include/rtdm/i2c.h
+new file mode 100644
+index 0000000..7599fb4
+--- /dev/null
++++ b/include/rtdm/i2c.h
+@@ -0,0 +1,25 @@
++/*
++ * Copyright (C) 2014 Matthias Schneider <ma30002000@yahoo.de>
++ * 
++ * Xenomai is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * Xenomai is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with Xenomai; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#ifndef _RTDM_I2C_H
++#define _RTDM_I2C_H
++
++#include <rtdm/rtdm.h>
++#include <rtdm/i2c_uapi.h>
++
++#endif /* !_RTDM_I2C_H */
+diff --git a/include/rtdm/i2c_uapi.h b/include/rtdm/i2c_uapi.h
+new file mode 100644
+index 0000000..6ea458d
+--- /dev/null
++++ b/include/rtdm/i2c_uapi.h
+@@ -0,0 +1,36 @@
++/**
++ * @file
++ * Real-Time Driver Model for Xenomai, additional I2C configuration
++ * structures
++ * 
++ * @note Copyright (C) 2014 Matthias Schneider <ma30002000@yahoo.de>
++ * 
++ * Xenomai is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * Xenomai is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with Xenomai; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ * 
++ * @ingroup rti2c
++ */
++
++#ifndef _RTDM_UAPI_I2C_H
++#define _RTDM_UAPI_I2C_H
++
++#define RTI2C_GET_CFG 0x0740
++#define RTI2C_SET_CFG 0x0741
++
++struct rti2c_config {
++    uint16_t max_msgsize;
++    uint16_t max_msgs;
++};
++
++#endif /* !_RTDM_UAPI_I2C_H */
+diff --git a/include/rtdm/rtdm.h b/include/rtdm/rtdm.h
+index d907f08..aea6af6 100644
+--- a/include/rtdm/rtdm.h
++++ b/include/rtdm/rtdm.h
+@@ -121,6 +121,7 @@ typedef int64_t nanosecs_rel_t;
+ #define RTDM_CLASS_RTMAC		5
+ #define RTDM_CLASS_TESTING		6
+ #define RTDM_CLASS_RTIPC		7
++#define RTDM_CLASS_I2C			9
+ /*
+ #define RTDM_CLASS_USB			?
+ #define RTDM_CLASS_FIREWIRE		?
+diff --git a/ksrc/drivers/Kconfig b/ksrc/drivers/Kconfig
+index 2a9bd8c..c061b1c 100644
+--- a/ksrc/drivers/Kconfig
++++ b/ksrc/drivers/Kconfig
+@@ -5,6 +5,7 @@ depends on XENO_OPT_NUCLEUS
+ source "drivers/xenomai/serial/Kconfig"
+ source "drivers/xenomai/testing/Kconfig"
+ source "drivers/xenomai/can/Kconfig"
++source "drivers/xenomai/i2c/Kconfig"
+ source "drivers/xenomai/analogy/Kconfig"
+ source "drivers/xenomai/ipc/Kconfig"
+ 
+diff --git a/ksrc/drivers/Makefile b/ksrc/drivers/Makefile
+index 4968d87..9d08e96 100644
+--- a/ksrc/drivers/Makefile
++++ b/ksrc/drivers/Makefile
+@@ -2,7 +2,7 @@ ifneq ($(VERSION).$(PATCHLEVEL),2.4)
+ 
+ # Makefile frag for Linux v2.6 and v3.x
+ 
+-obj-$(CONFIG_XENOMAI) += serial/ testing/ can/ analogy/ ipc/
++obj-$(CONFIG_XENOMAI) += serial/ testing/ can/ analogy/ i2c/ ipc/
+ 
+ else
+ 
+@@ -19,6 +19,7 @@ subdir-$(CONFIG_XENO_DRIVERS_SWITCHTEST) += testing
+ subdir-$(CONFIG_XENO_DRIVERS_CAN) += can
+ subdir-$(CONFIG_XENO_DRIVERS_ANALOGY) += analogy
+ subdir-$(CONFIG_XENO_DRIVERS_MPIPE) += ipc
++subdir-$(CONFIG_XENO_DRIVERS_I2C) += i2c
+ 
+ include $(TOPDIR)/Rules.make
+ 
+diff --git a/ksrc/drivers/i2c/Kconfig b/ksrc/drivers/i2c/Kconfig
+new file mode 100644
+index 0000000..6a66123
+--- /dev/null
++++ b/ksrc/drivers/i2c/Kconfig
+@@ -0,0 +1,29 @@
++menu "Real-time I2C drivers"
++
++config XENO_DRIVERS_RTI2C
++	tristate "RTI2C"
++	help
++
++	This driver provides real-time I2C drivers over RTDM.
++
++config XENO_DRIVERS_RTI2C_OMAP
++	depends on XENO_DRIVERS_RTI2C
++	default n
++	tristate "OMAP real-time I2C adapter"
++	help
++		If you say yes to this option, support will be included for the
++		RTDM I2C interface on the Texas Instruments OMAP1/2 family of processors.
++		Like OMAP1510/1610/1710/5912 and OMAP242x.
++		For details see http://www.ti.com/omap.
++
++config XENO_DRIVERS_RTI2C_SUNXI
++	depends on XENO_DRIVERS_RTI2C
++	default y
++	tristate "SUNXI real-time I2C adapter"
++	help
++		If you say yes to this option, support will be included for the
++		RTDM I2C interface on the SUNXI sun8i family of processors.
++		Like sun8iw8/sun8iw10/sun8iw11.
++		For details see http://www.linux-sunxi.org/.
++
++endmenu
+diff --git a/ksrc/drivers/i2c/Makefile b/ksrc/drivers/i2c/Makefile
+new file mode 100644
+index 0000000..e8fc2e8
+--- /dev/null
++++ b/ksrc/drivers/i2c/Makefile
+@@ -0,0 +1,9 @@
++# Makefile frag for Linux v2.6 and v3.x
++
++EXTRA_CFLAGS += -D__IN_XENOMAI__ -Iinclude/xenomai -Idrivers/xenomai/i2c
++
++obj-$(CONFIG_XENO_DRIVERS_RTI2C) += xeno_rti2c.o
++obj-$(CONFIG_XENO_DRIVERS_RTI2C_SUNXI) += xeno_rti2c_sunxi.o
++
++xeno_rti2c-y := rti2c-dev.o 
++xeno_rti2c_sunxi-y += busses/rti2c-sunxi.o
+diff --git a/ksrc/drivers/i2c/README b/ksrc/drivers/i2c/README
+new file mode 100644
+index 0000000..f735918
+--- /dev/null
++++ b/ksrc/drivers/i2c/README
+@@ -0,0 +1,180 @@
++RT-I2C - RTDM driver for I2C devices
++====================================
++
++RT-I2C is an Open Source hard real-time protocol stack for I2C
++devices similar to the native linux I2C frramework. This 
++implementation is for RTDM, the Real-Time-Driver-Model. 
++
++Status:
++------
++
++Currently drivers are available for the following I2C controllers and 
++devices:
++
++  - TI AM335x (e.g. BeagleBone, BeagleBone Black)
++  - Other TI devices of the OMAP family (not tested)
++
++Installation:
++------------
++
++o Kernel space part:
++
++  - Please install the Xenomai kernel space part as described in the
++    README.INSTALL.
++
++  - Configure RT-Socket-CAN as kernel modules as required by your 
++    hardware (and make sure that loadable module support is enabled):
++
++    $ make menuconfig
++    ... Select "Xenomai --->"
++               "Drivers --->" 
++               "Real-time I2C drivers --->"
++    <M> RTI2C 
++    <M>   OMAP real-time I2C adapter
++    ... Exit and save
++
++    Note: you can also statically link the RTI2C drivers into 
++    the kernel.
++
++
++  - Loading the RT-I2C modules
++
++    Now boot the Xenomai enabled kernel on your target system.
++
++    In case the RT-I2C subsystem is built as kernel modules, you need to load 
++    them using modprobe or insmod, e.g. for this example build:
++
++    # modprobe xeno_i2c
++    # modprobe rti2c-omap
++
++Usage
++-----
++The usage of the rt i2c driver is similar to to using the i2c framework 
++on Linux (error handling excluded in example):
++
++#include <rtdm/rtdm.h>
++#include <rtdm/i2c.h>
++#include <linux/i2c.h>
++#include <linux/i2c-dev.h>
++
++unsigned char data;
++const unsigned char I2C_ADDR = 0x1c;
++const unsigned char I2C_REG_NUM = 0xa4;
++int fd;
++
++int fd = rt_dev_open("i2c-2", 0);    Note that various kernel module parameters can be passed with 
++    insmod. Please use "modinfo" to list them or check the 
++    corresponding source code files for further information.
++
++rt_dev_ioctl(fd, I2C_SLAVE, I2C_ADDR);
++rt_dev_write(fd, &I2C_REG_NUM, sizeof I2C_REG_NUM);
++rt_dev_read(fd, &data, sizeof data);
++rt_dev_close(fd);
++
++Alternatively, the following message-based ioctl can be used:
++
++#include <rtdm/rtdm.h>
++#include <rtdm/i2c.h>
++#include <linux/i2c.h>
++#include <linux/i2c-dev.h>
++
++fd = rt_dev_open("i2c-2", 0);  
++struct i2c_msg msgs[2];
++
++msgs[0].addr  = I2C_ADDR;
++msgs[0].flags = 0;
++msgs[0].len   = sizeof I2C_REG_NUM;
++msgs[0].buf   = &I2C_REG_NUM;
++
++msgs[1].addr  = I2C_ADDR;
++msgs[1].flags = I2C_M_RD;
++msgs[1].len   = sizeof data;
++msgs[1].buf   = &data;
++
++struct i2c_rdwr_ioctl_data idata;
++idata.msgs    = &msgs[0];
++idata.nmsgs   = sizeof msgs / sizeof msgs[0];
++
++rt_dev_ioctl(fd, I2C_RDWR, &idata);
++rt_dev_close(fd);
++
++Available devices can be queried via /proc/xenomai/rtdm/named_devices and are named "i2c-#":
++
++Name                            Driver          /proc
++rttest-timerbench0              xeno_timerbench rttest-timerbench0
++rttest-switchtest0              xeno_switchtest rttest-switchtest0
++i2c-0                           xeno_i2c        i2c-0
++i2c-2                           xeno_i2c        i2c-2
++
++
++Difference to Linux driver
++--------------------------
++
++The rtdm rt i2c driver relies on preallocated message buffers instead of 
++allocating heap memory on the fly when sending or receiving messages.
++By default, the number of buffers is 16 x 16 bytes.
++This value can be queried by the following ioctl call:
++
++struct rti2c_config cfg;
++if (rt_dev_ioctl(fd, RTI2C_GET_CFG, &cfg) == 0) {
++    printf("max_msgsize %d, max_msgs %d\n", cfg.max_msgsize, cfg.max_msgs);
++}
++
++These values can also be set via:
++
++struct rti2c_config cfg;
++cfg.max_msgsize = 1024;
++cfg.max_msgs = 2;
++if (rt_dev_ioctl(fd, RTI2C_SET_CFG, &cfg) < 0) {
++    fprintf("error configuring maximum message size\n");
++}
++
++In case the driver was not able to allocate the requested buffers in the
++kernel, -ENOMEM is returned. All other calls to rt_dev_read(), rt_dev_write()
++and rt_dev_ioctl() for RTI2C_GET_CFG and I2C_RDWR will fail until
++RTI2C_SET_CFG was successfully called again.
++
++max_msgsize should be set to the maximum size in  bytes of the largest i2c 
++message to be received or transmitted.
++
++max_msgs should be set to the largest number of messages packet into one 
++rt_dev_ioctl()/I2C_RDWR call.
++
++In case the preallocated buffer size would be surpassed by calls to read, write 
++and rt_dev_ioctl()/I2C_RDWR, -EINVAL is returned
++
++Porting of other drivers
++------------------------
++
++Some task to do when converting a linux i2c driver to rtdm:
++
++  - convert time values from jiffies and msecs to ns
++    (e.g. jiffies -> rtdm_clock_read(), time_after() -> time_after_ns(), ...)
++
++  - spinlock_t into rtdm_lock_t
++    (e.g. spin_lock_irqrestore() -> rtdm_lock_put_irqrestore(), ...)
++
++  - convert completion into rtdm_event_t
++    (e.g. wait_for_completion_timeout() -> rtdm_event_timed_wait(),
++    complete() -> rtdm_event_signal(), ...)
++    caution: return values differ 
++
++  - change struct i2c_adapter to struct rti2c_adapter
++  - change i2c_get_adapdata() to rti2c_get_adapdata()
++  - change i2c_set_adapdata() to rti2c_set_adapdata()
++
++  - convert interrupt service routines and register using rtdm_irq_request()
++    caution: return values differ 
++
++  - convert struct i2c_algorithm to rti2c_algorithm (no smb support)
++
++  - use rtdm_alloc allocations
++
++  - disable power management
++
++License:
++-------
++
++RT-I2C is free software, and you are welcome to redistribute it 
++under the terms of the GNU General Public License. This program comes 
++with ABSOLUTELY NO WARRANTY. See "COPYING" for details.
+diff --git a/ksrc/drivers/i2c/busses/i2c-sunxi.h b/ksrc/drivers/i2c/busses/i2c-sunxi.h
+new file mode 100644
+index 0000000..76b5a34
+--- /dev/null
++++ b/ksrc/drivers/i2c/busses/i2c-sunxi.h
+@@ -0,0 +1,240 @@
++/*
++ * drivers/i2c/busses/i2c-sunxi.h
++ *
++ * Copyright (C) 2013 Allwinner.
++ * Pan Nan <pannan@reuuimllatech.com>
++ *
++ * SUNXI TWI Register Definition
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * 2013.5.3 Mintow <duanmintao@allwinnertech.com>
++ *    Adapt to all the new chip of Allwinner. Support sun8i/sun9i.
++ */
++
++#ifndef _SUNXI_I2C_H_
++#define _SUNXI_I2C_H_
++
++#include <mach/platform.h>
++#include <linux/regulator/consumer.h>
++
++#define TWI_MODULE_NUM    (5)
++
++/* TWI Register Offset */
++#define TWI_ADDR_REG    	(0x00) 	/*  31:8bit reserved,7-1bit for slave addr,0 bit for GCE */
++#define TWI_XADDR_REG   	(0x04) 	/*  31:8bit reserved,7-0bit for second addr in 10bit addr */
++#define TWI_DATA_REG    	(0x08) 	/*  31:8bit reserved, 7-0bit send or receive data byte */
++#define TWI_CTL_REG     	(0x0C) 	/*  INT_EN,BUS_EN,M_STA,INT_FLAG,A_ACK */
++#define TWI_STAT_REG    	(0x10) 	/*  28 interrupt types + 0xF8 normal type = 29  */
++#define TWI_CLK_REG     	(0x14) 	/*  31:7bit reserved,6-3bit,CLK_M,2-0bit CLK_N */
++#define TWI_SRST_REG    	(0x18) 	/*  31:1bit reserved;0bit,write 1 to clear 0. */
++#define TWI_EFR_REG     	(0x1C) 	/*  31:2bit reserved,1:0 bit data byte follow read comand */
++#define TWI_LCR_REG     	(0x20) 	/*  31:6bits reserved  5:0bit for sda&scl control*/
++#define TWI_DVFS_REG        (0x24)  /*  31:3bits reserved  2:0bit for dvfs control. only A10 support. */
++
++/* TWI address register */
++#define TWI_GCE_EN      	(0x1 <<0) /* general call address enable for slave mode */
++#define TWI_ADDR_MASK   	(0x7f<<1) /* 7:1bits */
++/* 31:8bits reserved */
++
++
++/* TWI extend address register */
++#define TWI_XADDR_MASK  (0xff) /* 7:0bits for extend slave address */
++/* 31:8bits reserved */
++
++
++/* TWI Data register default is 0x0000_0000 */
++#define TWI_DATA_MASK   (0xff) /* 7:0bits for send or received */
++
++/* TWI Control Register Bit Fields & Masks, default value: 0x0000_0000*/
++/* 1:0 bits reserved */
++#define TWI_CTL_ACK		(0x1<<2) /* set 1 to send A_ACK,then low level on SDA */
++#define TWI_CTL_INTFLG	(0x1<<3) /* INT_FLAG,interrupt status flag: set '1' when interrupt coming */
++#define TWI_CTL_STP		(0x1<<4) /* M_STP,Automatic clear 0 */
++#define TWI_CTL_STA		(0x1<<5) /* M_STA,atutomatic clear 0 */
++#define TWI_CTL_BUSEN	(0x1<<6) /* BUS_EN, master mode should be set 1.*/
++#define TWI_CTL_INTEN	(0x1<<7) /* INT_EN */
++/* 31:8 bit reserved */
++
++
++/* TWI Clock Register Bit Fields & Masks,default value:0x0000_0000 */
++/*
++Fin is APB CLOCK INPUT;
++Fsample = F0 = Fin/2^CLK_N; 
++          F1 = F0/(CLK_M+1);
++          
++Foscl = F1/10 = Fin/(2^CLK_N * (CLK_M+1)*10); 
++Foscl is clock SCL;standard mode:100KHz or fast mode:400KHz        
++*/
++#define TWI_CLK_DIV_M		(0xF<<3) /* 6:3bit  */
++#define TWI_CLK_DIV_N		(0x7<<0) /* 2:0bit */
++
++
++/* TWI Soft Reset Register Bit Fields & Masks  */
++#define TWI_SRST_SRST		(0x1<<0) /* write 1 to clear 0, when complete soft reset clear 0 */
++
++
++/* TWI Enhance Feature Register Bit Fields & Masks  */
++/* default -- 0x0 */
++#define TWI_EFR_MASK        (0x3<<0)/* 00:no,01: 1byte, 10:2 bytes, 11: 3bytes */
++#define TWI_EFR_WARC_0      (0x0<<0)
++#define TWI_EFR_WARC_1      (0x1<<0)
++#define TWI_EFR_WARC_2      (0x2<<0)
++#define TWI_EFR_WARC_3      (0x3<<0)
++
++
++/* twi line control register -default value: 0x0000_003a */
++#define TWI_LCR_SDA_EN          (0x01<<0) 	/* SDA line state control enable ,1:enable;0:disable */
++#define TWI_LCR_SDA_CTL         (0x01<<1) 	/* SDA line state control bit, 1:high level;0:low level */
++#define TWI_LCR_SCL_EN          (0x01<<2) 	/* SCL line state control enable ,1:enable;0:disable */
++#define TWI_LCR_SCL_CTL         (0x01<<3) 	/* SCL line state control bit, 1:high level;0:low level */
++#define TWI_LCR_SDA_STATE_MASK  (0x01<<4)   /* current state of SDA,readonly bit */
++#define TWI_LCR_SCL_STATE_MASK  (0x01<<5)   /* current state of SCL,readonly bit */
++/* 31:6bits reserved */
++#define TWI_LCR_IDLE_STATUS     (0x3a)
++
++
++/* TWI Status Register Bit Fields & Masks  */
++#define TWI_STAT_MASK                   (0xff)
++/* 7:0 bits use only,default is 0xF8 */
++#define TWI_STAT_BUS_ERR				(0x00) 	/* BUS ERROR */
++/* Master mode use only */
++#define TWI_STAT_TX_STA					(0x08) 	/* START condition transmitted */
++#define TWI_STAT_TX_RESTA				(0x10) 	/* Repeated START condition transmitted */
++#define TWI_STAT_TX_AW_ACK				(0x18) 	/* Address+Write bit transmitted, ACK received */
++#define TWI_STAT_TX_AW_NAK				(0x20) 	/* Address+Write bit transmitted, ACK not received */
++#define TWI_STAT_TXD_ACK				(0x28) 	/* data byte transmitted in master mode,ack received */
++#define TWI_STAT_TXD_NAK				(0x30) 	/* data byte transmitted in master mode ,ack not received */
++#define TWI_STAT_ARBLOST				(0x38) 	/* arbitration lost in address or data byte */
++#define TWI_STAT_TX_AR_ACK				(0x40) 	/* Address+Read bit transmitted, ACK received */
++#define TWI_STAT_TX_AR_NAK				(0x48) 	/* Address+Read bit transmitted, ACK not received */
++#define TWI_STAT_RXD_ACK				(0x50) 	/* data byte received in master mode ,ack transmitted */
++#define TWI_STAT_RXD_NAK				(0x58) 	/* date byte received in master mode,not ack transmitted */
++/* Slave mode use only */
++#define TWI_STAT_RXWS_ACK				(0x60) 	/* Slave address+Write bit received, ACK transmitted */
++#define TWI_STAT_ARBLOST_RXWS_ACK		(0x68)
++#define TWI_STAT_RXGCAS_ACK				(0x70) 	/* General Call address received, ACK transmitted */
++#define TWI_STAT_ARBLOST_RXGCAS_ACK		(0x78)
++#define TWI_STAT_RXDS_ACK				(0x80)
++#define TWI_STAT_RXDS_NAK				(0x88)
++#define TWI_STAT_RXDGCAS_ACK			(0x90)
++#define TWI_STAT_RXDGCAS_NAK			(0x98)
++#define TWI_STAT_RXSTPS_RXRESTAS		(0xA0)
++#define TWI_STAT_RXRS_ACK				(0xA8)
++
++#define TWI_STAT_ARBLOST_SLAR_ACK       (0xB0)
++
++/* 10bit Address, second part of address */
++#define TWI_STAT_TX_SAW_ACK             (0xD0) 	/* Second Address byte+Write bit transmitted,ACK received */
++#define TWI_STAT_TX_SAW_NAK             (0xD8) 	/* Second Address byte+Write bit transmitted,ACK not received */
++
++#define TWI_STAT_IDLE					(0xF8) 	/* No relevant status infomation,INT_FLAG = 0 */
++
++
++/* status or interrupt source */
++/*------------------------------------------------------------------------------
++* Code   Status
++* 00h    Bus error
++* 08h    START condition transmitted
++* 10h    Repeated START condition transmitted
++* 18h    Address + Write bit transmitted, ACK received
++* 20h    Address + Write bit transmitted, ACK not received
++* 28h    Data byte transmitted in master mode, ACK received
++* 30h    Data byte transmitted in master mode, ACK not received
++* 38h    Arbitration lost in address or data byte
++* 40h    Address + Read bit transmitted, ACK received
++* 48h    Address + Read bit transmitted, ACK not received
++* 50h    Data byte received in master mode, ACK transmitted
++* 58h    Data byte received in master mode, not ACK transmitted
++* 60h    Slave address + Write bit received, ACK transmitted
++* 68h    Arbitration lost in address as master, slave address + Write bit received, ACK transmitted
++* 70h    General Call address received, ACK transmitted
++* 78h    Arbitration lost in address as master, General Call address received, ACK transmitted
++* 80h    Data byte received after slave address received, ACK transmitted
++* 88h    Data byte received after slave address received, not ACK transmitted
++* 90h    Data byte received after General Call received, ACK transmitted
++* 98h    Data byte received after General Call received, not ACK transmitted
++* A0h    STOP or repeated START condition received in slave mode
++* A8h    Slave address + Read bit received, ACK transmitted
++* B0h    Arbitration lost in address as master, slave address + Read bit received, ACK transmitted
++* B8h    Data byte transmitted in slave mode, ACK received
++* C0h    Data byte transmitted in slave mode, ACK not received
++* C8h    Last byte transmitted in slave mode, ACK received
++* D0h    Second Address byte + Write bit transmitted, ACK received
++* D8h    Second Address byte + Write bit transmitted, ACK not received
++* F8h    No relevant status information or no interrupt
++*-----------------------------------------------------------------------------*/
++
++/* TWI mode select */
++
++#define TWI_MASTER_MODE     (1)
++#define TWI_SLAVE_MODE      (0)	/* seldom use */
++
++/* The global infor of TWI channel. */
++
++#if defined(CONFIG_ARCH_SUN8IW8P1)
++#define SUNXI_TWI_NUM			1
++#endif
++
++#ifndef SUNXI_TWI_NUM
++#define SUNXI_TWI_NUM			1
++#endif
++
++#ifndef SUNXI_TP_CHAN
++#define SUNXI_TP_CHAN			0 /* Touch panel need high speed. */
++#endif
++
++#define SUNXI_TWI_DEV_NAME		"twi"
++#define SUNXI_TWI_CHAN_MASK(ch)	(1<<ch)
++#define SUNXI_TWI_RES_NUM		2 /* Mem and IRQ */
++
++/* Memory mapping. */
++
++#define SUNXI_TWI_MEM_BASE		SUNXI_TWI0_PBASE
++#define SUNXI_TWI_MEM_RANGE		0x400
++#define SUNXI_TWI_MEM_START(ch)	(SUNXI_TWI_MEM_BASE + ch * SUNXI_TWI_MEM_RANGE)
++#define SUNXI_TWI_MEM_END(ch)	(SUNXI_TWI_MEM_START(ch) + SUNXI_TWI_MEM_RANGE - 1)
++
++/* Transfer speed. */
++
++#define SUNXI_TWI_SPEED_200K	(200000)
++#define SUNXI_TWI_SPEED_400K	(400000)
++#define SUNXI_TWI_SPEED(ch)	(ch == SUNXI_TP_CHAN ? SUNXI_TWI_SPEED_400K : SUNXI_TWI_SPEED_200K)
++
++/* The IRQ number. */
++
++#ifdef CONFIG_EVB_PLATFORM
++#define SUNXI_TWI_IRQ(ch)	    (SUNXI_IRQ_TWI0 + ch)
++#else
++#define SUNXI_TWI_IRQ(ch)	    SUNXI_IRQ_TWI0 /* In FPGA, only one IRQ is available. */
++#endif
++
++/* Support to use s_twi */
++#ifdef CONFIG_SUNXI_S_TWI
++#if defined(CONFIG_ARCH_SUN8IW6P1) || defined(CONFIG_ARCH_SUN8IW9P1)
++#undef SUNXI_TWI_NUM
++#define SUNXI_TWI_NUM			4
++#endif
++#endif
++
++#ifdef CONFIG_SUNXI_S_TWI
++#define SUNXI_S_TWI_DEV_NAME		"s_twi"
++#define SUNXI_S_TWI_MEM_BASE		SUNXI_R_TWI_PBASE
++#define SUNXI_S_TWI_MEM_RANGE		0x400
++#define SUNXI_S_TWI_MEM_START		(SUNXI_S_TWI_MEM_BASE)
++#define SUNXI_S_TWI_MEM_END		(SUNXI_S_TWI_MEM_START + SUNXI_S_TWI_MEM_RANGE - 1)
++#define SUNXI_S_TWI_IRQ 		SUNXI_IRQ_RTWI
++#endif
++
++struct sunxi_i2c_platform_data {
++	int 		 bus_num;
++	unsigned int frequency;
++	char 		      regulator_id[16];
++	struct regulator *regulator;
++};
++
++#endif /* end of _SUNXI_I2C_H_ */
++
+diff --git a/ksrc/drivers/i2c/busses/rti2c-sunxi.c b/ksrc/drivers/i2c/busses/rti2c-sunxi.c
+new file mode 100644
+index 0000000..bd2e4e9
+--- /dev/null
++++ b/ksrc/drivers/i2c/busses/rti2c-sunxi.c
+@@ -0,0 +1,1505 @@
++/*
++ * drivers/i2c/busses/i2c-sunxi.c
++ *
++ * Copyright (C) 2013 Allwinner.
++ * Pan Nan <pannan@reuuimllatech.com>
++ *
++ * SUNXI TWI Controller Driver
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * 2013.5.3 Mintow <duanmintao@allwinnertech.com>
++ *    Adapt to all the new chip of Allwinner. Support sun8i/sun9i.
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/i2c.h>
++#include <linux/sched.h>
++#include <linux/delay.h>
++#include <linux/interrupt.h>
++#include <linux/platform_device.h>
++#include <linux/err.h>
++#include <linux/clk.h>
++#include <linux/slab.h>
++#include <linux/io.h>
++#include <linux/gpio.h>
++#include <linux/kernel_ut.h>
++#include <linux/pinctrl/consumer.h>
++#include <mach/irqs.h>
++#include <mach/sys_config.h>
++#include <linux/clk/sunxi.h>
++
++#include <xenomai/rtdm/rtdm_driver.h>
++#include <xenomai/rtdm/i2c.h>
++#include "../rti2c.h"
++
++#include "i2c-sunxi.h"
++
++/* For debug */
++#ifdef CONFIG_RTI2C_DEBUG
++#define I2C_EXIT()  		rtdm_printk("%s()%d - %s \n", __func__, __LINE__, "Exit")
++#define I2C_ENTER() 		rtdm_printk("%s()%d - %s \n", __func__, __LINE__, "Enter ...")
++#define I2C_DBG(fmt, arg...)	rtdm_printk("%s()%d - "fmt, __func__, __LINE__, ##arg)
++#define I2C_ERR(fmt, arg...)	rtdm_printk("%s()%d - "fmt, __func__, __LINE__, ##arg)
++#else
++#define I2C_EXIT()  		
++#define I2C_ENTER() 		
++#define I2C_DBG(fmt, arg...)	
++#define I2C_ERR(fmt, arg...)
++#endif
++#ifndef CONFIG_SUNXI_I2C_PRINT_TRANSFER_INFO
++static int bus_transfer_dbg = -1;
++module_param_named(transfer_debug, bus_transfer_dbg, int, S_IRUGO | S_IWUSR | S_IWGRP);
++#endif
++
++UT_DECLARE();
++
++#define SUNXI_I2C_OK      0
++#define SUNXI_I2C_FAIL   -1
++#define SUNXI_I2C_RETRY  -2
++#define SUNXI_I2C_SFAIL  -3  /* start fail */
++#define SUNXI_I2C_TFAIL  -4  /* stop  fail */
++
++static int twi_used_mask = 0;
++
++/* I2C transfer status */
++enum
++{
++	I2C_XFER_IDLE    = 0x1,
++	I2C_XFER_START   = 0x2,
++	I2C_XFER_RUNNING = 0x4,
++};
++
++struct sunxi_i2c {
++	int 				bus_num;
++	unsigned int      	status; /* start, running, idle */
++	unsigned int      	suspended:1;
++	struct rti2c_adapter	adap;
++
++	rtdm_lock_t          lock; /* syn */
++	rtdm_event_t   wait;
++
++	struct i2c_msg      *msg;
++	unsigned int		msg_num;
++	unsigned int		msg_idx;
++	unsigned int		msg_ptr;
++
++#ifdef CONFIG_EVB_PLATFORM
++	struct clk         *mclk;
++#endif
++
++	unsigned int     	bus_freq;
++	int					irq;
++	rtdm_irq_t			irq_handle;
++	unsigned int 		debug_state; /* log the twi machine state */
++
++	void __iomem	 	*base_addr;
++
++	struct pinctrl		*pctrl;
++};
++
++/* clear the interrupt flag */
++static inline void twi_clear_irq_flag(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++    /* start and stop bit should be 0 */
++	reg_val |= TWI_CTL_INTFLG;
++	reg_val &= ~(TWI_CTL_STA | TWI_CTL_STP);
++	writel(reg_val ,base_addr + TWI_CTL_REG);
++	/* read two more times to make sure that interrupt flag does really be cleared */
++	{
++		unsigned int temp;
++		temp = readl(base_addr + TWI_CTL_REG);
++		temp |= readl(base_addr + TWI_CTL_REG);
++	}
++}
++
++/* get data first, then clear flag */
++static inline void twi_get_byte(void __iomem *base_addr, unsigned char  *buffer)
++{
++	*buffer = (unsigned char)( TWI_DATA_MASK & readl(base_addr + TWI_DATA_REG) );
++	twi_clear_irq_flag(base_addr);
++}
++
++/* only get data, we will clear the flag when stop */
++static inline void twi_get_last_byte(void __iomem *base_addr, unsigned char  *buffer)
++{
++	*buffer = (unsigned char)( TWI_DATA_MASK & readl(base_addr + TWI_DATA_REG) );
++}
++
++/* write data and clear irq flag to trigger send flow */
++static inline void twi_put_byte(void __iomem *base_addr, const unsigned char *buffer)
++{
++	writel((unsigned int)*buffer, base_addr + TWI_DATA_REG);
++	twi_clear_irq_flag(base_addr);
++}
++
++static inline void twi_enable_irq(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++
++	/*
++	 * 1 when enable irq for next operation, set intflag to 0 to prevent to clear it by a mistake
++	 *   (intflag bit is write-1-to-clear bit)
++	 * 2 Similarly, mask START bit and STOP bit to prevent to set it twice by a mistake
++	 *   (START bit and STOP bit are self-clear-to-0 bits)
++	 */
++	reg_val |= TWI_CTL_INTEN;
++	reg_val &= ~(TWI_CTL_STA | TWI_CTL_STP | TWI_CTL_INTFLG);
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++static inline void twi_disable_irq(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val &= ~TWI_CTL_INTEN;
++	reg_val &= ~(TWI_CTL_STA | TWI_CTL_STP | TWI_CTL_INTFLG);
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++static inline void twi_disable_bus(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val &= ~TWI_CTL_BUSEN;
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++static inline void twi_enable_bus(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val |= TWI_CTL_BUSEN;
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++/* trigger start signal, the start bit will be cleared automatically */
++static inline void twi_set_start(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val |= TWI_CTL_STA;
++	reg_val &= ~TWI_CTL_INTFLG;
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++/* get start bit status, poll if start signal is sent */
++static inline unsigned int twi_get_start(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val >>= 5;
++	return reg_val & 1;
++}
++
++/* trigger stop signal, the stop bit will be cleared automatically */
++static inline void twi_set_stop(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val |= TWI_CTL_STP;
++	reg_val &= ~TWI_CTL_INTFLG;
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++/* get stop bit status, poll if stop signal is sent */
++static inline unsigned int twi_get_stop(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val >>= 4;
++	return reg_val & 1;
++}
++
++static inline void twi_disable_ack(void __iomem  *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val &= ~TWI_CTL_ACK;
++	reg_val &= ~TWI_CTL_INTFLG;
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++/* when sending ack or nack, it will send ack automatically */
++static inline void twi_enable_ack(void __iomem  *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	reg_val |= TWI_CTL_ACK;
++	reg_val &= ~TWI_CTL_INTFLG;
++	writel(reg_val, base_addr + TWI_CTL_REG);
++}
++
++/* get the interrupt flag */
++static inline unsigned int twi_query_irq_flag(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CTL_REG);
++	return (reg_val & TWI_CTL_INTFLG);//0x 0000_1000
++}
++
++/* get interrupt status */
++static inline unsigned int twi_query_irq_status(void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_STAT_REG);
++	return (reg_val & TWI_STAT_MASK);
++}
++
++/* set twi clock
++ *
++ * clk_n: clock divider factor n
++ * clk_m: clock divider factor m
++ */
++static inline void twi_clk_write_reg(unsigned int clk_n, unsigned int clk_m, void __iomem *base_addr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_CLK_REG);
++	I2C_DBG("%s: clk_n = %d, clk_m = %d\n", __FUNCTION__, clk_n, clk_m);
++	reg_val &= ~(TWI_CLK_DIV_M | TWI_CLK_DIV_N);
++	reg_val |= ( clk_n |(clk_m << 3) );
++	writel(reg_val, base_addr + TWI_CLK_REG);
++}
++
++/*
++* Fin is APB CLOCK INPUT;
++* Fsample = F0 = Fin/2^CLK_N;
++* F1 = F0/(CLK_M+1);
++* Foscl = F1/10 = Fin/(2^CLK_N * (CLK_M+1)*10);
++* Foscl is clock SCL;100KHz or 400KHz
++*
++* clk_in: apb clk clock
++* sclk_req: freqence to set in HZ
++*/
++static void twi_set_clock(unsigned int clk_in, unsigned int sclk_req, void __iomem *base_addr)
++{
++	unsigned int clk_m = 0;
++	unsigned int clk_n = 0;
++	unsigned int _2_pow_clk_n = 1;
++	unsigned int src_clk      = clk_in/10;
++	unsigned int divider      = src_clk/sclk_req;  // 400khz or 100khz
++	unsigned int sclk_real    = 0;      // the real clock frequency
++
++	if (divider == 0) {
++		clk_m = 1;
++		goto set_clk;
++	}
++
++	/* search clk_n and clk_m,from large to small value so that can quickly find suitable m & n. */
++	while (clk_n < 8) { // 3bits max value is 8
++		/* (m+1)*2^n = divider -->m = divider/2^n -1 */
++		clk_m = (divider/_2_pow_clk_n) - 1;
++		/* clk_m = (divider >> (_2_pow_clk_n>>1))-1 */
++		while (clk_m < 16) { /* 4bits max value is 16 */
++			sclk_real = src_clk/(clk_m + 1)/_2_pow_clk_n;  /* src_clk/((m+1)*2^n) */
++			if (sclk_real <= sclk_req) {
++				goto set_clk;
++			}
++			else {
++				clk_m++;
++			}
++		}
++		clk_n++;
++		_2_pow_clk_n *= 2; /* mutilple by 2 */
++	}
++
++set_clk:
++	twi_clk_write_reg(clk_n, clk_m, base_addr);
++
++	return;
++}
++
++/* soft reset twi */
++static inline void twi_soft_reset(void __iomem *base_addr)
++{
++	unsigned int reg_val;
++
++	reg_val = TWI_LCR_IDLE_STATUS;
++	writel(reg_val, base_addr + TWI_LCR_REG);
++
++	reg_val = readl(base_addr + TWI_SRST_REG);
++	reg_val |= TWI_SRST_SRST;
++	writel(reg_val, base_addr + TWI_SRST_REG);
++}
++
++/* Enhanced Feature Register */
++static inline void twi_set_efr(void __iomem *base_addr, unsigned int efr)
++{
++	unsigned int reg_val = readl(base_addr + TWI_EFR_REG);
++
++	reg_val &= ~TWI_EFR_MASK;
++	efr     &= TWI_EFR_MASK;
++	reg_val |= efr;
++	writel(reg_val, base_addr + TWI_EFR_REG);
++}
++
++static int sunxi_i2c_xfer_complete(struct sunxi_i2c *i2c, int code);
++static int sunxi_i2c_do_xfer(struct sunxi_i2c *i2c, struct i2c_msg *msgs, int num);
++
++static void twi_chan_cfg(struct sunxi_i2c_platform_data *pdata)
++{
++	int i;
++	script_item_u item = {0};
++	script_item_value_type_e type = 0;
++	char twi_para[16] = {0};
++
++	for (i=0; i<SUNXI_TWI_NUM; i++) {
++		sprintf(twi_para, "twi%d", i);
++		type = script_get_item(twi_para, "twi_used", &item);
++		if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
++			I2C_ERR("[twi%d] has no twi_used!\n", i);
++			continue;
++		}
++		if (item.val)
++			twi_used_mask |= SUNXI_TWI_CHAN_MASK(i);
++
++		type = script_get_item(twi_para, "twi_regulator", &item);
++		if (SCIRPT_ITEM_VALUE_TYPE_STR != type) {
++			I2C_ERR("[twi%d] has no twi_regulator.\n", i);
++			continue;
++		}
++		strncpy(pdata[i].regulator_id, item.str, 16);
++	}
++
++#ifdef CONFIG_SUNXI_S_TWI
++	do {
++		i = SUNXI_TWI_NUM - 1;
++		sprintf(twi_para, SUNXI_S_TWI_DEV_NAME"%d", 0);
++		type = script_get_item(twi_para, "twi_used", &item);
++		if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
++			I2C_ERR("[twi%d] has no twi_used!\n", i);
++			continue;
++		}
++		if (item.val)
++			twi_used_mask |= SUNXI_TWI_CHAN_MASK(i);
++
++		type = script_get_item(twi_para, "twi_regulator", &item);
++		if (SCIRPT_ITEM_VALUE_TYPE_STR != type) {
++			I2C_ERR("[twi%d] has no twi_regulator.\n", i);
++			continue;
++		}
++		strncpy(pdata[i].regulator_id, item.str, 16);
++	} while(0);
++#endif
++}
++
++static int twi_chan_is_enable(int _ch)
++{
++	//return 1;
++	return twi_used_mask & SUNXI_TWI_CHAN_MASK(_ch);
++}
++
++static int twi_select_gpio_state(struct pinctrl *pctrl, char *name, u32 no)
++{
++	int ret = 0;
++	struct pinctrl_state *pctrl_state = NULL;
++
++	pctrl_state = pinctrl_lookup_state(pctrl, name);
++	if (IS_ERR(pctrl_state)) {
++		I2C_ERR("TWI%d pinctrl_lookup_state(%s) failed! return %p \n", no, name, pctrl_state);
++		return -1;
++	}
++
++	ret = pinctrl_select_state(pctrl, pctrl_state);
++	if (ret < 0)
++		I2C_ERR("TWI%d pinctrl_select_state(%s) failed! return %d \n", no, name, ret);
++
++	return ret;
++}
++static int twi_request_gpio(struct sunxi_i2c *i2c)
++{
++	//I2C_DBG("Pinctrl init %d ... [%s]\n", i2c->bus_num, i2c->adap.dev.device_name);
++
++	if (!twi_chan_is_enable(i2c->bus_num))
++		return -1;
++	
++#ifdef CONFIG_SUNXI_S_TWI
++	if (i2c->bus_num == (SUNXI_TWI_NUM - 1)) {
++		/* use name s_twi1 to get pinctrl */
++		snprintf(i2c->adap.name, sizeof(i2c->adap.name), SUNXI_S_TWI_DEV_NAME"%u", 0);
++		I2C_DBG("%s\n", i2c->adap.name);
++	}
++#endif
++
++	i2c->pctrl = devm_pinctrl_get(i2c->adap.dev.parent);
++	if (IS_ERR(i2c->pctrl)) {
++		I2C_ERR("TWI%d devm_pinctrl_get() failed! return %ld\n", i2c->bus_num, PTR_ERR(i2c->pctrl));
++		return -1;
++	}
++
++#ifdef CONFIG_SUNXI_S_TWI
++	if (i2c->bus_num == (SUNXI_TWI_NUM - 1)) {
++		snprintf(i2c->adap.name, sizeof(i2c->adap.name), SUNXI_TWI_DEV_NAME"%u", i2c->bus_num);
++	}
++#endif
++
++	return twi_select_gpio_state(i2c->pctrl, PINCTRL_STATE_DEFAULT, i2c->bus_num);
++}
++
++static void twi_release_gpio(struct sunxi_i2c *i2c)
++{
++	devm_pinctrl_put(i2c->pctrl);
++}
++/* function  */
++static int twi_start(void __iomem *base_addr, int bus_num)
++{
++	unsigned int timeout = 0xff;
++
++	twi_set_start(base_addr);
++	while((1 == twi_get_start(base_addr))&&(--timeout));
++	if (timeout == 0) {
++		I2C_ERR("[i2c%d] START can't sendout!\n", bus_num);
++		return SUNXI_I2C_FAIL;
++	}
++
++	return SUNXI_I2C_OK;
++}
++
++static int twi_restart(void __iomem *base_addr, int bus_num)
++{
++	unsigned int timeout = 0xff;
++	twi_set_start(base_addr);
++	twi_clear_irq_flag(base_addr);
++	while((1 == twi_get_start(base_addr))&&(--timeout));
++	if (timeout == 0) {
++		I2C_ERR("[i2c%d] Restart can't sendout!\n", bus_num);
++		return SUNXI_I2C_FAIL;
++	}
++	return SUNXI_I2C_OK;
++}
++
++static int twi_stop(void __iomem *base_addr, int bus_num)
++{
++	unsigned int timeout = 0xff;
++
++	twi_set_stop(base_addr);
++	twi_clear_irq_flag(base_addr);
++
++	twi_get_stop(base_addr);/* it must delay 1 nop to check stop bit */
++	while(( 1 == twi_get_stop(base_addr))&& (--timeout));
++	if (timeout == 0) {
++		I2C_ERR("[i2c%d] STOP can't sendout!\n", bus_num);
++		return SUNXI_I2C_TFAIL;
++	}
++
++	timeout = 0xff;
++	while((TWI_STAT_IDLE != readl(base_addr + TWI_STAT_REG))&&(--timeout));
++	if (timeout == 0) {
++		I2C_ERR("[i2c%d] i2c state isn't idle(0xf8)\n", bus_num);
++		return SUNXI_I2C_TFAIL;
++	}
++
++	timeout = 0xff;
++	while((TWI_LCR_IDLE_STATUS != readl(base_addr + TWI_LCR_REG))&&(--timeout));
++	if (timeout == 0) {
++		I2C_ERR("[i2c%d] i2c lcr isn't idle(0x3a)\n", bus_num);
++		return SUNXI_I2C_TFAIL;
++	}
++
++	return SUNXI_I2C_OK;
++}
++
++/* get SDA state */
++static unsigned int twi_get_sda(void __iomem *base_addr)
++{
++    unsigned int status = 0;
++    status = TWI_LCR_SDA_STATE_MASK & readl(base_addr + TWI_LCR_REG);
++    status >>= 4;
++    return  (status&0x1);
++}
++
++/* set SCL level(high/low), only when SCL enable */
++static void twi_set_scl(void __iomem *base_addr, unsigned int hi_lo)
++{
++    unsigned int reg_val = readl(base_addr + TWI_LCR_REG);
++    reg_val &= ~TWI_LCR_SCL_CTL;
++    hi_lo   &= 0x01;
++    reg_val |= (hi_lo<<3);
++    writel(reg_val, base_addr + TWI_LCR_REG);
++}
++
++/* enable SDA or SCL */
++static void twi_enable_lcr(void __iomem *base_addr, unsigned int sda_scl)
++{
++    unsigned int reg_val = readl(base_addr + TWI_LCR_REG);
++    sda_scl &= 0x01;
++    if (sda_scl)
++        reg_val |= TWI_LCR_SCL_EN;/* enable scl line control */
++    else
++        reg_val |= TWI_LCR_SDA_EN;/* enable sda line control */
++
++    writel(reg_val, base_addr + TWI_LCR_REG);
++}
++
++/* disable SDA or SCL */
++static void twi_disable_lcr(void __iomem *base_addr, unsigned int sda_scl)
++{
++    unsigned int reg_val = readl(base_addr + TWI_LCR_REG);
++    sda_scl &= 0x01;
++    if (sda_scl)
++        reg_val &= ~TWI_LCR_SCL_EN;/* disable scl line control */
++    else
++        reg_val &= ~TWI_LCR_SDA_EN;/* disable sda line control */
++
++    writel(reg_val, base_addr + TWI_LCR_REG);
++}
++
++/* send 9 clock to release sda */
++static int twi_send_clk_9pulse(void __iomem *base_addr, int bus_num)
++{
++    int twi_scl = 1;
++    int low = 0;
++    int high = 1;
++    int cycle = 0;
++
++    /* enable scl control */
++    twi_enable_lcr(base_addr, twi_scl);
++
++    while (cycle < 9)
++    {
++        if (twi_get_sda(base_addr)
++            && twi_get_sda(base_addr)
++            && twi_get_sda(base_addr)) {
++            break;
++        }
++        /* twi_scl -> low */
++        twi_set_scl(base_addr, low);
++		rtdm_task_sleep(MS_TO_NS(1));
++
++        /* twi_scl -> high */
++        twi_set_scl(base_addr, high);
++		rtdm_task_sleep(MS_TO_NS(1));
++        cycle++;
++    }
++
++    if (twi_get_sda(base_addr)) {
++        twi_disable_lcr(base_addr, twi_scl);
++        return SUNXI_I2C_OK;
++    }
++    else {
++        I2C_ERR("[i2c%d] SDA is still Stuck Low, failed. \n", bus_num);
++        twi_disable_lcr(base_addr, twi_scl);
++        return SUNXI_I2C_FAIL;
++    }
++}
++#if 0
++static int twi_regulator_request(struct sunxi_i2c_platform_data *pdata)
++{
++	struct regulator *regu = NULL;
++
++	/* Consider "n***" as nocare. Support "none", "nocare", "null", "" etc. */
++	if ((pdata->regulator_id[0] == 'n') || (pdata->regulator_id[0] == 0))
++		return 0;
++
++	regu = regulator_get(NULL, pdata->regulator_id);
++	if (IS_ERR(regu)) {
++		I2C_ERR("[i2c%d] get regulator %s failed!\n", pdata->bus_num, pdata->regulator_id);
++		return -1;
++	}
++	pdata->regulator = regu;
++	return 0;
++}
++
++static void twi_regulator_release(struct sunxi_i2c_platform_data *pdata)
++{
++	if (pdata->regulator == NULL)
++		return;
++
++	regulator_put(pdata->regulator);
++	pdata->regulator = NULL;
++}
++
++static int twi_regulator_enable(struct sunxi_i2c_platform_data *pdata)
++{
++	if (pdata->regulator == NULL)
++		return 0;
++
++	if (regulator_enable(pdata->regulator) != 0) {
++		I2C_ERR("[i2c%d] enable regulator %s failed!\n", pdata->bus_num, pdata->regulator_id);
++		return -1;
++	}
++	return 0;
++}
++
++static int twi_regulator_disable(struct sunxi_i2c_platform_data *pdata)
++{
++	if (pdata->regulator == NULL)
++		return 0;
++
++	if (regulator_disable(pdata->regulator) != 0) {
++		I2C_ERR("[i2c%d] enable regulator %s failed!\n", pdata->bus_num, pdata->regulator_id);
++		return -1;
++	}
++	return 0;
++}
++#endif
++/*
++****************************************************************************************************
++*
++*  FunctionName:           sunxi_i2c_addr_byte
++*
++*  Description:
++*            ����slave��ַ��7bit��ȫ����Ϣ����10bit�ĵ�һ���ֵ�ַ�����ⲿ�ӿڵ��ã��ڲ�ʵ�֡�
++*         7bits addr: 7-1bits addr+0 bit r/w
++*         10bits addr: 1111_11xx_xxxx_xxxx-->1111_0xx_rw,xxxx_xxxx
++*         send the 7 bits addr,or the first part of 10 bits addr
++*  Parameters:
++*
++*
++*  Return value:
++*           ��
++*  Notes:
++*
++****************************************************************************************************
++*/
++static void sunxi_i2c_addr_byte(struct sunxi_i2c *i2c)
++{
++	unsigned char addr = 0;
++	unsigned char tmp  = 0;
++
++	if (i2c->msg[i2c->msg_idx].flags & I2C_M_TEN) {
++		/* 0111_10xx,ten bits address--9:8bits */
++		tmp = 0x78 | ( ( (i2c->msg[i2c->msg_idx].addr)>>8 ) & 0x03);
++		addr = tmp << 1;//1111_0xx0
++		/* how about the second part of ten bits addr? Answer: deal at twi_core_process() */
++	}
++	else {
++		/* 7-1bits addr, xxxx_xxx0 */
++		addr = (i2c->msg[i2c->msg_idx].addr & 0x7f) << 1;
++	}
++
++	/* read, default value is write */
++	if (i2c->msg[i2c->msg_idx].flags & I2C_M_RD) {
++		addr |= 1;
++	}
++
++#ifdef CONFIG_SUNXI_I2C_PRINT_TRANSFER_INFO
++	if (i2c->bus_num == CONFIG_SUNXI_I2C_PRINT_TRANSFER_INFO_WITH_BUS_NUM) {
++		if (i2c->msg[i2c->msg_idx].flags & I2C_M_TEN) {
++			I2C_DBG("[i2c%d] first part of 10bits = 0x%x\n", i2c->bus_num, addr);
++		}
++		I2C_DBG("[i2c%d] 7bits+r/w = 0x%x\n", i2c->bus_num, addr);
++	}
++#else
++	if (unlikely(bus_transfer_dbg != -1)) {
++		if (i2c->bus_num == bus_transfer_dbg) {
++			if (i2c->msg[i2c->msg_idx].flags & I2C_M_TEN) {
++				I2C_DBG("[i2c%d] first part of 10bits = 0x%x\n", i2c->bus_num, addr);
++			}
++			I2C_DBG("[i2c%d] 7bits+r/w = 0x%x\n", i2c->bus_num, addr);
++		}
++	}
++#endif
++	/* send 7bits+r/w or the first part of 10bits */
++	twi_put_byte(i2c->base_addr, &addr);
++}
++
++
++static int sunxi_i2c_core_process(struct sunxi_i2c *i2c)
++{
++	void __iomem *base_addr = i2c->base_addr;
++	int  ret        = SUNXI_I2C_OK;
++	int  err_code   = 0;
++	unsigned char  state = 0;
++	unsigned char  tmp   = 0;
++	unsigned long flags = 0;
++
++	state = twi_query_irq_status(base_addr);
++
++	rtdm_lock_get_irqsave(&i2c->lock, flags);
++
++#ifdef CONFIG_SUNXI_I2C_PRINT_TRANSFER_INFO
++	if (i2c->bus_num == CONFIG_SUNXI_I2C_PRINT_TRANSFER_INFO_WITH_BUS_NUM) {
++		I2C_DBG("[i2c%d][slave address = (0x%x), state = (0x%x)]\n", i2c->bus_num, i2c->msg->addr, state);
++	}
++#else
++	if (unlikely(bus_transfer_dbg != -1)) {
++		if (i2c->bus_num == bus_transfer_dbg) {
++			I2C_DBG("[i2c%d][slave address = (0x%x), state = (0x%x)]\n", i2c->bus_num, i2c->msg->addr, state);
++		}
++	}
++#endif
++
++    if (i2c->msg == NULL) {
++        I2C_ERR("[i2c%d] i2c message is NULL, err_code = 0xfe\n", i2c->bus_num);
++        err_code = 0xfe;
++        goto msg_null;
++    }
++
++	switch (state) {
++	case 0xf8: /* On reset or stop the bus is idle, use only at poll method */
++		err_code = 0xf8;
++		goto err_out;
++	case 0x08: /* A START condition has been transmitted */
++	case 0x10: /* A repeated start condition has been transmitted */
++		sunxi_i2c_addr_byte(i2c);/* send slave address */
++		break;
++	case 0xd8: /* second addr has transmitted, ACK not received!    */
++	case 0x20: /* SLA+W has been transmitted; NOT ACK has been received */
++		err_code = 0x20;
++		goto err_out;
++	case 0x18: /* SLA+W has been transmitted; ACK has been received */
++		/* if any, send second part of 10 bits addr */
++		if (i2c->msg[i2c->msg_idx].flags & I2C_M_TEN) {
++			tmp = i2c->msg[i2c->msg_idx].addr & 0xff;  /* the remaining 8 bits of address */
++			twi_put_byte(base_addr, &tmp); /* case 0xd0: */
++			break;
++		}
++		/* for 7 bit addr, then directly send data byte--case 0xd0:  */
++	case 0xd0: /* second addr has transmitted,ACK received!     */
++	case 0x28: /* Data byte in DATA REG has been transmitted; ACK has been received */
++		/* after send register address then START send write data  */
++		if (i2c->msg_ptr < i2c->msg[i2c->msg_idx].len) {
++			twi_put_byte(base_addr, &(i2c->msg[i2c->msg_idx].buf[i2c->msg_ptr]));
++			i2c->msg_ptr++;
++			break;
++		}
++
++		i2c->msg_idx++; /* the other msg */
++		i2c->msg_ptr = 0;
++		if (i2c->msg_idx == i2c->msg_num) {
++			err_code = SUNXI_I2C_OK;/* Success,wakeup */
++			goto ok_out;
++		}
++		else if (i2c->msg_idx < i2c->msg_num) {/* for restart pattern */
++			ret = twi_restart(base_addr, i2c->bus_num);/* read spec, two msgs */
++			if (ret == SUNXI_I2C_FAIL) {
++				err_code = SUNXI_I2C_SFAIL;
++				goto err_out;/* START can't sendout */
++			}
++		}
++		else {
++			err_code = SUNXI_I2C_FAIL;
++			goto err_out;
++		}
++		break;
++	case 0x30: /* Data byte in I2CDAT has been transmitted; NOT ACK has been received */
++		err_code = 0x30;//err,wakeup the thread
++		goto err_out;
++	case 0x38: /* Arbitration lost during SLA+W, SLA+R or data bytes */
++		err_code = 0x38;//err,wakeup the thread
++		goto err_out;
++	case 0x40: /* SLA+R has been transmitted; ACK has been received */
++		/* with Restart,needn't to send second part of 10 bits addr,refer-"I2C-SPEC v2.1" */
++		/* enable A_ACK need it(receive data len) more than 1. */
++		if (i2c->msg[i2c->msg_idx].len > 1) {
++			/* send register addr complete,then enable the A_ACK and get ready for receiving data */
++			twi_enable_ack(base_addr);
++			twi_clear_irq_flag(base_addr);/* jump to case 0x50 */
++		}
++		else if (i2c->msg[i2c->msg_idx].len == 1) {
++			twi_clear_irq_flag(base_addr);/* jump to case 0x58 */
++		}
++		break;
++	case 0x48: /* SLA+R has been transmitted; NOT ACK has been received */
++		err_code = 0x48;//err,wakeup the thread
++		goto err_out;
++	case 0x50: /* Data bytes has been received; ACK has been transmitted */
++		/* receive first data byte */
++		if (i2c->msg_ptr < i2c->msg[i2c->msg_idx].len) {
++			/* more than 2 bytes, the last byte need not to send ACK */
++			if ((i2c->msg_ptr + 2) == i2c->msg[i2c->msg_idx].len ) {
++				twi_disable_ack(base_addr);/* last byte no ACK */
++			}
++			/* get data then clear flag,then next data comming */
++			twi_get_byte(base_addr, &i2c->msg[i2c->msg_idx].buf[i2c->msg_ptr]);
++			i2c->msg_ptr++;
++			break;
++		}
++		/* err process, the last byte should be @case 0x58 */
++		err_code = SUNXI_I2C_FAIL;/* err, wakeup */
++		goto err_out;
++	case 0x58: /* Data byte has been received; NOT ACK has been transmitted */
++		/* received the last byte  */
++		if ( i2c->msg_ptr == i2c->msg[i2c->msg_idx].len - 1 ) {
++			twi_get_last_byte(base_addr, &i2c->msg[i2c->msg_idx].buf[i2c->msg_ptr]);
++			i2c->msg_idx++;
++			i2c->msg_ptr = 0;
++			if (i2c->msg_idx == i2c->msg_num) {
++				err_code = SUNXI_I2C_OK; // succeed,wakeup the thread
++				goto ok_out;
++			}
++			else if (i2c->msg_idx < i2c->msg_num) {
++				/* repeat start */
++				ret = twi_restart(base_addr, i2c->bus_num);
++				if(ret == SUNXI_I2C_FAIL) {/* START fail */
++					err_code = SUNXI_I2C_SFAIL;
++					goto err_out;
++				}
++				break;
++			}
++		}
++		else {
++			err_code = 0x58;
++			goto err_out;
++		}
++	case 0x00: /* Bus error during master or slave mode due to illegal level condition */
++		err_code = 0xff;
++		goto err_out;
++	default:
++		err_code = state;
++		goto err_out;
++	}
++	i2c->debug_state = state;/* just for debug */
++	rtdm_lock_put_irqrestore(&i2c->lock, flags);
++	return ret;
++
++ok_out:
++err_out:
++	if (SUNXI_I2C_TFAIL == twi_stop(base_addr, i2c->bus_num)) {
++		I2C_ERR("[i2c%d] STOP failed!\n", i2c->bus_num);
++	}
++
++msg_null:
++	ret = sunxi_i2c_xfer_complete(i2c, err_code);/* wake up */
++	i2c->debug_state = state;/* just for debug */
++	rtdm_lock_put_irqrestore(&i2c->lock, flags);
++	return ret;
++}
++
++static int sunxi_i2c_handler(rtdm_irq_t *irq_handle)
++{
++	struct sunxi_i2c *i2c = rtdm_irq_get_arg(irq_handle, struct sunxi_i2c);
++
++	if (!twi_query_irq_flag(i2c->base_addr)) {
++		I2C_ERR("unknown interrupt!\n");
++		return RTDM_IRQ_NONE;
++	}
++
++	/* disable irq */
++	twi_disable_irq(i2c->base_addr);
++
++	/* twi core process */
++	sunxi_i2c_core_process(i2c);
++
++	/* enable irq only when twi is transfering, otherwise disable irq */
++	if (i2c->status != I2C_XFER_IDLE) {
++		twi_enable_irq(i2c->base_addr);
++	}
++
++	return RTDM_IRQ_HANDLED;
++}
++
++static int sunxi_i2c_xfer_complete(struct sunxi_i2c *i2c, int code)
++{
++	int ret = SUNXI_I2C_OK;
++
++	i2c->msg     = NULL;
++	i2c->msg_num = 0;
++	i2c->msg_ptr = 0;
++	i2c->status  = I2C_XFER_IDLE;
++
++	/* i2c->msg_idx  store the information */
++	if (code == SUNXI_I2C_FAIL) {
++		I2C_ERR("[i2c%d] Maybe Logic Error, debug it!\n", i2c->bus_num);
++		i2c->msg_idx = code;
++		ret = SUNXI_I2C_FAIL;
++	}
++	else if (code != SUNXI_I2C_OK) {
++		i2c->msg_idx = code;
++		ret = SUNXI_I2C_FAIL;
++	}
++	rtdm_event_signal(&i2c->wait);
++
++	return ret;
++}
++
++static int sunxi_i2c_xfer(struct rti2c_adapter *adap, struct i2c_msg *msgs, int num)
++{
++	struct sunxi_i2c *i2c = (struct sunxi_i2c *)adap->algo_data;
++	int ret = SUNXI_I2C_FAIL;
++	int i   = 0;
++
++	if (i2c->suspended) {
++		I2C_ERR("[i2c%d] has already suspend, dev addr:0x%x!\n", i2c->adap.nr, msgs->addr);
++		return -ENODEV;
++	}
++
++	for (i = 1; i <= adap->retries; i++) {
++		ret = sunxi_i2c_do_xfer(i2c, msgs, num);
++
++		if (ret != SUNXI_I2C_RETRY) {
++			goto out;
++		}
++
++		I2C_DBG("[i2c%d] Retrying transmission %d\n", i2c->adap.nr, i);
++		rtdm_task_sleep(MS_TO_NS(1));
++	}
++
++	ret = -EREMOTEIO;
++out:
++	return ret;
++}
++
++static int sunxi_i2c_do_xfer(struct sunxi_i2c *i2c, struct i2c_msg *msgs, int num)
++{
++	unsigned long timeout = 0;
++	int ret = SUNXI_I2C_FAIL;
++	unsigned long flags = 0;
++	int i = 0, j =0;
++
++	twi_soft_reset(i2c->base_addr);
++	rtdm_task_sleep(MS_TO_NS(1));
++
++	/* test the bus is free,already protect by the semaphore at DEV layer */
++	while (TWI_STAT_IDLE != twi_query_irq_status(i2c->base_addr)&&
++	       TWI_STAT_BUS_ERR != twi_query_irq_status(i2c->base_addr) &&
++	       TWI_STAT_ARBLOST_SLAR_ACK != twi_query_irq_status(i2c->base_addr)) {
++		I2C_DBG("[i2c%d] bus is busy, status = %x\n", i2c->bus_num, twi_query_irq_status(i2c->base_addr));
++        if (SUNXI_I2C_OK == twi_send_clk_9pulse(i2c->base_addr, i2c->bus_num)) {
++            break;
++        }
++        else {
++            ret = SUNXI_I2C_RETRY;
++            goto out;
++        }
++	}
++
++	/* may conflict with xfer_complete */
++	rtdm_lock_get_irqsave(&i2c->lock, flags);
++	i2c->msg     = msgs;
++	i2c->msg_num = num;
++	i2c->msg_ptr = 0;
++	i2c->msg_idx = 0;
++	i2c->status  = I2C_XFER_START;
++    twi_enable_irq(i2c->base_addr);  /* enable irq */
++	twi_disable_ack(i2c->base_addr); /* disabe ACK */
++	twi_set_efr(i2c->base_addr, 0);  /* set the special function register,default:0. */
++	rtdm_lock_put_irqrestore(&i2c->lock, flags);
++
++	/*for(i =0 ; i < num; i++){
++		for(j = 0; j < msgs->len; j++){
++			I2C_DBG("baddr = 0x%x \n",msgs->addr);
++			I2C_DBG("data = 0x%x \n", msgs->buf[j]);
++		}
++		I2C_DBG("\n\n");
++	}
++	I2C_DBG("i2c_base_addr = 0x%x num=%d\n",i2c->base_addr, i2c->bus_num);
++	*/
++	/* START signal, needn't clear int flag */
++	ret = twi_start(i2c->base_addr, i2c->bus_num);
++	if (ret == SUNXI_I2C_FAIL) {
++		twi_soft_reset(i2c->base_addr);
++		twi_disable_irq(i2c->base_addr);  /* disable irq */
++		i2c->status  = I2C_XFER_IDLE;
++		ret = SUNXI_I2C_RETRY;
++		goto out;
++	}
++
++	i2c->status  = I2C_XFER_RUNNING;
++	/* sleep and wait, do the transfer at interrupt handler ,timeout = 5*HZ */
++	/*timeout = wait_event_timeout(i2c->wait, i2c->msg_num == 0, i2c->adap.timeout);*/
++	do {
++		timeout = rtdm_event_timedwait(&i2c->wait, i2c->adap.timeout_ns, NULL);
++	}while (timeout == -EINTR);
++
++	/* return code,if(msg_idx == num) succeed */
++	ret = i2c->msg_idx;
++	if (timeout == -ETIMEDOUT) {
++		I2C_ERR("[i2c%d] xfer timeout (dev addr:0x%x)\n", i2c->bus_num, msgs->addr);
++		rtdm_lock_get_irqsave(&i2c->lock, flags);
++		i2c->msg = NULL;
++		rtdm_lock_put_irqrestore(&i2c->lock, flags);
++		ret = -ETIMEDOUT;
++	}
++	else if (ret != num) {
++		I2C_ERR("[i2c%d] incomplete xfer (status: 0x%x, dev addr: 0x%x)\n", i2c->bus_num, ret, msgs->addr);
++		ret = -ECOMM;
++	}
++out:
++	return ret;
++}
++
++static unsigned int sunxi_i2c_functionality(struct rti2c_adapter *adap)
++{
++	return I2C_FUNC_I2C|I2C_FUNC_10BIT_ADDR|I2C_FUNC_SMBUS_EMUL;
++	//return I2C_FUNC_I2C|I2C_FUNC_10BIT_ADDR;
++}
++
++
++static const struct rti2c_algorithm sunxi_i2c_algorithm = {
++	.master_xfer	  = sunxi_i2c_xfer,
++	.functionality	  = sunxi_i2c_functionality,
++};
++
++#ifdef CONFIG_EVB_PLATFORM
++
++#ifdef CONFIG_SUNXI_S_TWI
++/*
++ * Since cpus' init is after clock module, and cpus will change cpus' clock
++ * without notice kernel clock module. So we need to upgrade the cpus part
++ * of the kernel clock tree, if we want to get s_twi's really souce clock frequency.
++ *
++ * Example on sun8iw6
++ * After clk init, clk tree is like:
++ * 	periph<---periphcpus
++ * 	OSC24M<---cpurcpus<---cpurahbs<---cpurapbs<---s_twi
++ * After cpus clock init, clk tree is like:
++ * 	periph<---periphcpus<---cpurcpus<---cpurahbs<---cpurapbs<---s_twi
++ * So we need to upgrade periphcpus and cpurcpus' clock frequency of the kernel clock tree.
++ */
++static int sunxi_i2c_clk_upgrade_cpus(void)
++{
++	struct clk *clk;
++	unsigned int rate;
++
++	clk = clk_get(NULL, "pll_periphcpus");
++	if (!clk) {
++		I2C_ERR("get pll_periphcpus clock frequency failed!\n");
++		return -1;
++	}
++	rate = clk_get_rate(clk);
++	I2C_DBG("get pll_periphcpus clock frequency %d!\n", rate);
++
++	clk = clk_get(NULL , "cpurcpus");
++	if (!clk) {
++		I2C_ERR("get cpurcpus clock frequency failed!\n");
++		return -1;
++	}
++	rate = clk_get_rate(clk);
++	I2C_DBG("get cpurcpus clock frequency %d!\n", rate);
++
++	return 0;
++}
++#endif
++
++static int sunxi_i2c_clk_init(struct sunxi_i2c *i2c)
++{
++	unsigned int apb_clk = 0;
++
++	if (clk_prepare_enable(i2c->mclk)) {
++		I2C_ERR("[i2c%d] enable apb_twi clock failed!\n", i2c->bus_num);
++		return -1;
++	}
++
++//	sunxi_periph_reset_deassert(i2c->mclk);
++
++	/* enable twi bus */
++	twi_enable_bus(i2c->base_addr);
++
++#ifdef CONFIG_SUNXI_S_TWI
++	if (i2c->bus_num == (SUNXI_TWI_NUM - 1)) {
++		if (sunxi_i2c_clk_upgrade_cpus()) {
++			I2C_ERR("[i2c%d] upgrade cpus clock frequency failed!\n", i2c->bus_num);
++			return -1;
++		}
++	}
++#endif
++
++	/* set twi module clock */
++	apb_clk  =  clk_get_rate(i2c->mclk);
++	if (apb_clk == 0) {
++		I2C_ERR("[i2c%d] get i2c source clock frequency failed!\n", i2c->bus_num);
++		return -1;
++	}
++
++	twi_set_clock(apb_clk, i2c->bus_freq, i2c->base_addr);
++
++	return 0;
++}
++
++static int sunxi_i2c_clk_exit(struct sunxi_i2c *i2c)
++{
++	/* disable twi bus */
++	twi_disable_bus(i2c->base_addr);
++
++	/* disable clk */
++	if (IS_ERR_OR_NULL(i2c->mclk)) {
++		I2C_ERR("[i2c%d] i2c mclk handle is invalid, just return!\n", i2c->bus_num);
++		return -1;
++	} else {
++//		sunxi_periph_reset_assert(i2c->mclk);
++	
++		clk_disable_unprepare(i2c->mclk);
++	}
++
++	return 0;
++}
++
++#else
++
++static int sunxi_i2c_clk_init(struct sunxi_i2c *i2c)
++{
++	twi_enable_bus(i2c->base_addr);
++	
++	twi_set_clock(24000000, i2c->bus_freq, i2c->base_addr);
++	return 0;
++}
++
++static int sunxi_i2c_clk_exit(struct sunxi_i2c *i2c)
++{
++	twi_disable_bus(i2c->base_addr);
++
++	return 0;
++}
++#endif
++
++static int sunxi_i2c_hw_init(struct sunxi_i2c *i2c, struct sunxi_i2c_platform_data *pdata)
++{
++	int ret = 0;
++#if 0
++	ret = twi_regulator_request(pdata);
++	if (ret < 0) {
++		I2C_ERR("[i2c%d] request regulator failed!\n", i2c->bus_num);
++		return -1;
++	}
++	twi_regulator_enable(pdata);
++#endif
++	ret = twi_request_gpio(i2c);
++	if (ret < 0) {
++		I2C_ERR("[i2c%d] request i2c gpio failed!\n", i2c->bus_num);
++		return -1;
++	}
++
++	if (sunxi_i2c_clk_init(i2c)) {
++		I2C_ERR("[i2c%d] init i2c clock failed!\n", i2c->bus_num);
++		return -1;
++	}
++
++	twi_soft_reset(i2c->base_addr);
++
++	return ret;
++}
++
++static void sunxi_i2c_hw_exit(struct sunxi_i2c *i2c, struct sunxi_i2c_platform_data *pdata)
++{
++	if (sunxi_i2c_clk_exit(i2c)) {
++		I2C_ERR("[i2c%d] exit i2c clock failed!\n", i2c->bus_num);
++		return;
++	}
++	twi_release_gpio(i2c);
++#if 0
++	twi_regulator_disable(pdata);
++	twi_regulator_release(pdata);
++#endif
++}
++
++static int __devinit sunxi_i2c_probe(struct platform_device *pdev)
++{
++	struct sunxi_i2c *i2c = NULL;
++	struct resource *res = NULL;
++	struct sunxi_i2c_platform_data *pdata = NULL;
++	int ret, irq;
++
++	pdata = pdev->dev.platform_data;
++	if (pdata == NULL) {
++		return -ENODEV;
++	}
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	irq = platform_get_irq(pdev, 0);
++	if (res == NULL || irq < 0) {
++		return -ENODEV;
++	}
++
++	/*if (!request_mem_region(res->start, resource_size(res), res->name)) {
++		return -ENOMEM;
++	}*/
++	
++	i2c = rtdm_malloc(sizeof(struct sunxi_i2c));
++	if (!i2c) {
++		ret = -ENOMEM;
++		goto emalloc;
++	}
++
++	i2c->adap.owner   = THIS_MODULE;
++	i2c->adap.nr      = pdata->bus_num;
++	i2c->adap.retries = 3;
++	//i2c->adap.timeout_ns = MS_TO_NS(5*HZ); //5*HZ
++	i2c->adap.timeout_ns = MS_TO_NS(1000); //5*HZ
++	i2c->adap.class   = I2C_CLASS_HWMON | I2C_CLASS_SPD;
++	i2c->bus_freq     = pdata->frequency;
++	i2c->irq 		  = irq;
++	i2c->bus_num      = pdata->bus_num;
++	i2c->status       = I2C_XFER_IDLE;
++	i2c->suspended = 0;	
++	snprintf(i2c->adap.name, sizeof(i2c->adap.name), SUNXI_TWI_DEV_NAME"%u", i2c->adap.nr);
++	pdev->dev.init_name = i2c->adap.name;
++	
++	rtdm_lock_init(&i2c->lock);
++	rtdm_event_init(&i2c->wait, 0);
++#ifdef CONFIG_EVB_PLATFORM
++	i2c->mclk = clk_get(NULL, i2c->adap.name);
++	if (IS_ERR_OR_NULL(i2c->mclk)) {
++		I2C_ERR("[i2c%d] request TWI clock failed\n", i2c->bus_num);
++		ret = -EIO;
++		goto eremap;
++	}
++#endif
++
++	/*i2c->base_addr = ioremap(res->start, resource_size(res));*/
++	i2c->base_addr = devm_request_and_ioremap(&pdev->dev, res);
++	if (!i2c->base_addr) {
++		ret = -EIO;
++		goto eremap;
++	}
++
++	i2c->adap.algo = &sunxi_i2c_algorithm;
++	ret = rtdm_irq_request(&i2c->irq_handle, irq, sunxi_i2c_handler, IRQF_DISABLED,
++			i2c->adap.name, i2c);
++	if (ret) {
++		I2C_ERR("[i2c%d] requeset irq failed!\n", i2c->bus_num);
++		goto ereqirq;
++	}
++
++	i2c->adap.algo_data  = i2c;
++	i2c->adap.dev.parent = &pdev->dev;
++
++	if (sunxi_i2c_hw_init(i2c, pdata)) {
++		ret = -EIO;
++		goto ehwinit;
++	}
++	rti2c_set_adapdata(&i2c->adap, i2c);
++	ret = rti2c_add_numbered_adapter(&i2c->adap);
++	if (ret < 0) {
++		I2C_ERR( "[i2c%d] failed to add adapter\n", i2c->bus_num);
++		goto eadapt;
++	}
++
++	platform_set_drvdata(pdev, i2c);
++
++	//I2C_DBG("I2C: %s: sunxi I2C adapter\n", dev_name(&i2c->adap.rtdm_dev));
++	I2C_DBG("TWI_CTL  0x%p: 0x%08x \n", i2c->base_addr + 0x0c, readl(i2c->base_addr + 0x0c));
++	I2C_DBG("TWI_STAT 0x%p: 0x%08x \n", i2c->base_addr + 0x10, readl(i2c->base_addr + 0x10));
++	I2C_DBG("TWI_CLK  0x%p: 0x%08x \n", i2c->base_addr + 0x14, readl(i2c->base_addr + 0x14));
++	I2C_DBG("TWI_SRST 0x%p: 0x%08x \n", i2c->base_addr + 0x18, readl(i2c->base_addr + 0x18));
++	I2C_DBG("TWI_EFR  0x%p: 0x%08x \n", i2c->base_addr + 0x1c, readl(i2c->base_addr + 0x1c));
++
++	return 0;
++
++eadapt:
++#ifdef CONFIG_EVB_PLATFORM
++	clk_disable_unprepare(i2c->mclk);
++#endif
++
++ehwinit:
++	free_irq(irq, i2c);
++
++ereqirq:
++	iounmap(i2c->base_addr);
++
++eremap:
++#ifdef CONFIG_EVB_PLATFORM
++	if (!IS_ERR_OR_NULL(i2c->mclk)) {
++		clk_put(i2c->mclk);
++		i2c->mclk = NULL;
++	}
++#endif
++	kfree(i2c);
++
++emalloc:
++
++	return ret;
++}
++
++
++static int __devexit sunxi_i2c_remove(struct platform_device *pdev)
++{
++	struct sunxi_i2c *i2c = platform_get_drvdata(pdev);
++
++	I2C_DBG("[i2c.%d] remove ... \n", i2c->bus_num);
++
++	platform_set_drvdata(pdev, NULL);
++	rti2c_del_adapter(&i2c->adap);
++	rtdm_irq_free(&i2c->irq_handle);
++	free_irq(i2c->irq, i2c);
++
++	/* disable clock and release gpio */
++	sunxi_i2c_hw_exit(i2c, pdev->dev.platform_data);
++	rtdm_event_destroy(&i2c->wait);
++#ifdef CONFIG_EVB_PLATFORM
++	if (IS_ERR_OR_NULL(i2c->mclk)) {
++		I2C_ERR("i2c mclk handle is invalid, just return!\n");
++		return -1;
++	} else {
++		clk_put(i2c->mclk);
++		i2c->mclk = NULL;
++	}
++#endif
++
++	iounmap(i2c->base_addr);
++	/*kfree(i2c);*/
++	rtdm_free(i2c);
++
++	I2C_EXIT();
++	return 0;
++}
++
++static void sunxi_i2c_release(struct device *dev)
++{
++	I2C_ENTER();
++}
++
++#if 0 //def CONFIG_PM
++static int sunxi_i2c_suspend(struct device *dev)
++{
++#ifdef CONFIG_EVB_PLATFORM
++	struct platform_device *pdev = to_platform_device(dev);
++	struct sunxi_i2c *i2c = platform_get_drvdata(pdev);
++	int count = 10;
++
++	while ((i2c->status != I2C_XFER_IDLE) && (count-- > 0)) {
++		I2C_ERR("[i2c%d] suspend while xfer,dev addr = 0x%x\n",
++			i2c->adap.nr, i2c->msg? i2c->msg->addr : 0xff);
++		msleep(100);
++		rtdm_task_sleep(MS_TO_NS(100));
++	}
++
++	i2c->suspended = 1;
++
++	if (sunxi_i2c_clk_exit(i2c)) {
++		I2C_ERR("[i2c%d] suspend failed.. \n", i2c->bus_num);
++		i2c->suspended = 0;
++		return -1;
++	}
++
++	twi_select_gpio_state(i2c->pctrl, PINCTRL_STATE_SUSPEND, i2c->bus_num);
++	twi_regulator_disable(dev->platform_data);
++
++	I2C_DBG("[i2c%d] suspend okay.. \n", i2c->bus_num);
++#endif
++	return 0;
++}
++
++static int sunxi_i2c_resume(struct device *dev)
++{
++#ifdef CONFIG_EVB_PLATFORM
++	struct platform_device *pdev = to_platform_device(dev);
++	struct sunxi_i2c *i2c = platform_get_drvdata(pdev);
++
++	i2c->suspended = 0;
++
++	twi_regulator_enable(dev->platform_data);
++	twi_select_gpio_state(i2c->pctrl, PINCTRL_STATE_DEFAULT, i2c->bus_num);
++
++	if (sunxi_i2c_clk_init(i2c)) {
++		I2C_ERR("[i2c%d] resume failed.. \n", i2c->bus_num);
++		return -1;
++	}
++
++	twi_soft_reset(i2c->base_addr);
++
++	I2C_DBG("[i2c%d] resume okay.. \n", i2c->bus_num);
++#endif
++	return 0;
++}
++
++static const struct dev_pm_ops sunxi_i2c_dev_pm_ops = {
++	.suspend = sunxi_i2c_suspend,
++	.resume = sunxi_i2c_resume,
++};
++
++#define SUNXI_I2C_DEV_PM_OPS (&sunxi_i2c_dev_pm_ops)
++#else
++#define SUNXI_I2C_DEV_PM_OPS NULL
++#endif
++
++static struct platform_driver sunxi_i2c_driver = {
++	.probe		= sunxi_i2c_probe,
++	.remove		= __devexit_p(sunxi_i2c_remove),
++	.driver		= {
++		.name	= SUNXI_TWI_DEV_NAME,
++		.owner	= THIS_MODULE,
++		.pm		= SUNXI_I2C_DEV_PM_OPS,
++	},
++};
++
++static struct resource sunxi_twi_resources[SUNXI_TWI_NUM * SUNXI_TWI_RES_NUM];
++static struct sunxi_i2c_platform_data sunxi_twi_pdata[SUNXI_TWI_NUM];
++static struct platform_device sunxi_twi_device[SUNXI_TWI_NUM];
++
++static void sunxi_twi_device_scan(void)
++{
++	int i;
++
++	memset(sunxi_twi_device, 0, sizeof(sunxi_twi_device));
++	memset(sunxi_twi_pdata, 0, sizeof(sunxi_twi_pdata));
++	memset(sunxi_twi_resources, 0, sizeof(sunxi_twi_resources));
++
++	for (i=0; i<SUNXI_TWI_NUM; i++) {
++		sunxi_twi_resources[i * SUNXI_TWI_RES_NUM].start = SUNXI_TWI_MEM_START(i);
++		sunxi_twi_resources[i * SUNXI_TWI_RES_NUM].end   = SUNXI_TWI_MEM_END(i);
++		sunxi_twi_resources[i * SUNXI_TWI_RES_NUM].flags = IORESOURCE_MEM;
++
++		sunxi_twi_resources[i * SUNXI_TWI_RES_NUM + 1].start = SUNXI_TWI_IRQ(i);
++		sunxi_twi_resources[i * SUNXI_TWI_RES_NUM + 1].end   = SUNXI_TWI_IRQ(i);
++		sunxi_twi_resources[i * SUNXI_TWI_RES_NUM + 1].flags = IORESOURCE_IRQ;
++
++		sunxi_twi_pdata[i].bus_num   = i;
++		sunxi_twi_pdata[i].frequency = SUNXI_TWI_SPEED(i);
++		
++		sunxi_twi_device[i].name = SUNXI_TWI_DEV_NAME;
++		sunxi_twi_device[i].id   = i;
++		sunxi_twi_device[i].resource = &sunxi_twi_resources[i * SUNXI_TWI_RES_NUM];
++		sunxi_twi_device[i].num_resources = SUNXI_TWI_RES_NUM;
++		sunxi_twi_device[i].dev.platform_data = &sunxi_twi_pdata[i];
++		sunxi_twi_device[i].dev.release = sunxi_i2c_release;
++	}
++
++#ifdef CONFIG_SUNXI_S_TWI
++	{
++		sunxi_twi_resources[(SUNXI_TWI_NUM - 1) * SUNXI_TWI_RES_NUM].start = SUNXI_S_TWI_MEM_START;
++		sunxi_twi_resources[(SUNXI_TWI_NUM - 1) * SUNXI_TWI_RES_NUM].end   = SUNXI_S_TWI_MEM_END;
++		sunxi_twi_resources[(SUNXI_TWI_NUM - 1) * SUNXI_TWI_RES_NUM].flags = IORESOURCE_MEM;
++
++		sunxi_twi_resources[(SUNXI_TWI_NUM - 1) * SUNXI_TWI_RES_NUM + 1].start = SUNXI_S_TWI_IRQ;
++		sunxi_twi_resources[(SUNXI_TWI_NUM - 1) * SUNXI_TWI_RES_NUM + 1].end   = SUNXI_S_TWI_IRQ;
++		sunxi_twi_resources[(SUNXI_TWI_NUM - 1) * SUNXI_TWI_RES_NUM + 1].flags = IORESOURCE_IRQ;
++	}
++#endif
++}
++
++static int __init sunxi_i2c_adap_init(void)
++{
++	int i;
++	int ret = 0;
++
++	sunxi_twi_device_scan();
++	twi_chan_cfg(sunxi_twi_pdata);
++
++#ifdef CONFIG_EVB_PLATFORM
++	for (i=0; i<SUNXI_TWI_NUM; i++)
++#else
++	i = CONFIG_TWI_CHAN_NUM; /* In FPGA, only one channel is available. */
++#endif
++	{
++		if (twi_chan_is_enable(i)) {
++			I2C_DBG("Sunxi I2C init channel %d \n", i);
++			ret = platform_device_register(&sunxi_twi_device[i]);
++			if (ret < 0) {
++				I2C_ERR("platform_device_register(%d) failed, return %d\n", i, ret);
++				return ret;
++			}
++		}
++	}
++
++    if (twi_used_mask)
++        return platform_driver_register(&sunxi_i2c_driver);
++
++    I2C_DBG("cannot find any using configuration for all twi controllers!\n");
++
++	return 0;
++}
++
++static void __exit sunxi_i2c_adap_exit(void)
++{
++	int i;
++	
++	I2C_ENTER();
++
++#ifdef CONFIG_EVB_PLATFORM
++	for (i=0; i<SUNXI_TWI_NUM; i++)
++#else
++	i = CONFIG_TWI_CHAN_NUM; /* In FPGA, only one channel is available. */
++#endif
++	{
++		if (twi_chan_is_enable(i)) {
++			I2C_DBG("[i2c.%d] Cleanup ... \n", i);
++			platform_device_unregister(&sunxi_twi_device[i]);
++		}
++	}
++
++	if (twi_used_mask)
++		platform_driver_unregister(&sunxi_i2c_driver);
++}
++
++module_init(sunxi_i2c_adap_init);
++module_exit(sunxi_i2c_adap_exit);
++
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:i2c-sunxi");
++MODULE_DESCRIPTION("SUNXI I2C Bus Driver");
++MODULE_AUTHOR("xlf");
+diff --git a/ksrc/drivers/i2c/rti2c-dev.c b/ksrc/drivers/i2c/rti2c-dev.c
+new file mode 100644
+index 0000000..205d499
+--- /dev/null
++++ b/ksrc/drivers/i2c/rti2c-dev.c
+@@ -0,0 +1,816 @@
++/*
++ * Copyright (C) 1995-97 Simon G. Vogl
++ * Copyright (C) 1998-99 Frodo Looijaard <frodol@dds.nl>
++ * Copyright (C) 2003 Greg Kroah-Hartman <greg@kroah.com>
++ * Copyright (C) 2014 Matthias Schneider <ma30002000@yahoo.de>
++ * 
++ * Originally written as part of the Linux I2C device driver framework.
++ * 
++ * Xenomai is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * Xenomai is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with Xenomai; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/device.h>
++#include <linux/notifier.h>
++#include <linux/init.h>
++#include <linux/idr.h>
++#include <linux/i2c.h>
++#include <linux/i2c-dev.h>
++
++#include <rtdm/rtdm_driver.h>
++#include <rtdm/i2c.h>
++
++#include "rti2c.h"
++
++#define RT_I2C_DRIVER_NAME	"xeno_i2c"
++
++#if defined(CONFIG_RTI2C_DEBUG)
++#define RTI2C_DBG(fmt, arg...) \
++do { \
++	rtdm_printk("%s()%d - "fmt, __func__, __LINE__, ##arg); \
++} while (0)
++#else
++#define RTI2C_DBG(fmt, arg...) \
++({								\
++	if (0) \
++		rtdm_printk("%s()%d - "fmt, __func__, __LINE__, ##arg); \
++	0; \
++})
++#endif
++
++#define RTI2C_ERR(fmt, arg...)	rtdm_printk("%s()%d - "fmt, __func__, __LINE__, ##arg)
++
++int rti2c_heaps_create(struct rti2c_client *client);
++void rti2c_heaps_destroy(struct rti2c_client *client);
++
++struct rti2c_adapter *rti2c_get_adapter(int nr);
++void rti2c_put_adapter(struct rti2c_adapter *adap);
++int rti2c_register_adapter(struct rti2c_adapter *adap);
++
++/* core_lock protects i2c_adapter_idr,
++   core_lock is taken during init - 
++   so we cannot use a rtdm_mutex here */
++
++static DEFINE_MUTEX(core_lock); 
++static DEFINE_IDR(i2c_adapter_idr);
++extern int __i2c_first_dynamic_bus_num;
++
++#define I2C_MINORS	256
++
++static int client_is_out_of_memory(struct rti2c_client* client)
++{
++	if (   !client->heaps.msgs 
++	    || !client->heaps.msgs_buf
++	    || !client->heaps.msgs_data) {
++		return -ENOMEM;
++	}
++	return 0;
++}
++/**
++ * __i2c_transfer - unlocked flavor of i2c_transfer
++ * @adap: Handle to I2C bus
++ * @msgs: One or more messages to execute before STOP is issued to
++ *	terminate the operation; each message begins with a START.
++ * @num: Number of messages to be executed.
++ *
++ * Returns negative errno, else the number of messages executed.
++ *
++ * Adapter lock must be held when calling this function. No debug logging
++ * takes place. adap->algo->master_xfer existence isn't checked.
++ */
++int __rti2c_transfer(struct rti2c_adapter *adap, struct i2c_msg *msgs, int num)
++{
++	nanosecs_abs_t timeout;
++	int ret, try;
++
++	/* Retry automatically on arbitration loss */
++	timeout = rtdm_clock_read() + adap->timeout_ns;
++	for (ret = 0, try = 0; try <= adap->retries; try++) {
++		ret = adap->algo->master_xfer(adap, msgs, num);
++		if (ret != -EAGAIN)
++			break;
++		if (time_after_ns(rtdm_clock_read(), timeout))
++			break;
++	}
++
++	return ret;
++}
++
++/**
++ * i2c_transfer - execute a single or combined I2C message
++ * @adap: Handle to I2C bus
++ * @msgs: One or more messages to execute before STOP is issued to
++ *	terminate the operation; each message begins with a START.
++ * @num: Number of messages to be executed.
++ *
++ * Returns negative errno, else the number of messages executed.
++ *
++ * Note that there is no requirement that each message be sent to
++ * the same slave address, although that is the most common model.
++ */
++int rti2c_transfer(struct rti2c_adapter *adap, struct i2c_msg *msgs, int num)
++{
++	int ret;
++
++	/* REVISIT the fault reporting model here is weak:
++	 *
++	 *  - When we get an error after receiving N bytes from a slave,
++	 *    there is no way to report "N".
++	 *
++	 *  - When we get a NAK after transmitting N bytes to a slave,
++	 *    there is no way to report "N" ... or to let the master
++	 *    continue executing the rest of this combined message, if
++	 *    that's the appropriate response.
++	 *
++	 *  - When for example "num" is two and we successfully complete
++	 *    the first message but get an error part way through the
++	 *    second, it's unclear whether that should be reported as
++	 *    one (discarding status on the second message) or errno
++	 *    (discarding status on the first one).
++	 */
++
++	if (adap->algo->master_xfer) {
++#ifdef DEBUG
++		for (ret = 0; ret < num; ret++) {
++			RTI2C_DBG("rti2c[d]: master_xfer[%d] %c, addr=0x%02x, "
++				"len=%d%s\n", ret, (msgs[ret].flags & I2C_M_RD)
++				? 'R' : 'W', msgs[ret].addr, msgs[ret].len,
++				(msgs[ret].flags & I2C_M_RECV_LEN) ? "+" : "");
++		}
++#endif
++
++		if (in_atomic() || irqs_disabled()) {
++			ret = rtdm_mutex_timedlock(&adap->bus_lock, RTDM_TIMEOUT_NONE, NULL);
++			if (ret < 0) /* different ret values on xenomai*/
++				/* I2C activity is ongoing. */
++				return -EAGAIN;
++		} else {
++			rtdm_mutex_lock(&adap->bus_lock);
++		}
++
++		ret = __rti2c_transfer(adap, msgs, num);
++		rtdm_mutex_unlock(&adap->bus_lock);
++
++		return ret;
++	} else {
++		RTI2C_ERR("rti2c[d]: I2C level transfers not supported\n");
++		return -EOPNOTSUPP;
++	}
++}
++
++static ssize_t rti2c_read(struct rtdm_dev_context *context, rtdm_user_info_t * user_info, void *buf, size_t count)
++{
++	int ret;
++	struct i2c_msg msg;
++	struct rti2c_client *client = (struct rti2c_client *)rtdm_context_to_private(context);
++
++	rtdm_mutex_lock(&client->heaps.mutex);
++
++	if (client_is_out_of_memory(client)) {
++		rtdm_mutex_unlock(&client->heaps.mutex);
++		return -ENOMEM;
++	}
++
++	if (count > client->cfg.max_msgsize)
++		count = client->cfg.max_msgsize;
++
++	RTI2C_DBG("i2c-dev[d]: %s reading %zu bytes.\n",
++		client->name, count);
++
++	msg.addr = client->addr;
++	msg.flags = client->flags & I2C_M_TEN;
++	msg.flags |= I2C_M_RD;
++	msg.len = count;
++	msg.buf = client->heaps.msgs_data;
++
++	ret = rti2c_transfer(client->adapter, &msg, 1);
++	
++	if (ret == 1) {
++		if (user_info) {
++			ret = rtdm_copy_to_user(user_info, buf, 
++						client->heaps.msgs_data, count);
++			if (ret == 0)
++				ret = count;
++		}
++		else {
++			memcpy(buf, client->heaps.msgs_data, count);
++			ret = count;
++		}
++	}
++
++	rtdm_mutex_unlock(&client->heaps.mutex);
++	return ret;
++}
++
++static ssize_t rti2c_write(struct rtdm_dev_context *context, rtdm_user_info_t * user_info, const void *buf, size_t count)
++{
++	int ret;
++	struct i2c_msg msg;
++	struct rti2c_client *client = (struct rti2c_client *)rtdm_context_to_private(context);
++
++	rtdm_mutex_lock(&client->heaps.mutex);
++
++	if (client_is_out_of_memory(client)) {
++		rtdm_mutex_unlock(&client->heaps.mutex);
++		return -ENOMEM;
++	}
++
++	if (count > client->cfg.max_msgsize)
++		count = client->cfg.max_msgsize;
++
++	if (user_info) {
++		ret = rtdm_copy_from_user(user_info, client->heaps.msgs_data, buf,
++					  count);
++	}
++	else {
++		memcpy(client->heaps.msgs_data, buf, count);
++		ret = 0;
++	}
++
++	RTI2C_DBG("i2c-dev[d]: %s writing %zu bytes.\n", 
++		client->name, count);
++
++	if (ret == 0){
++		msg.addr = client->addr;
++		msg.flags = client->flags & I2C_M_TEN;
++		msg.len = count;
++		msg.buf = client->heaps.msgs_data;
++
++		ret = rti2c_transfer(client->adapter, &msg, 1);
++		if (ret == 1) 
++			ret = count;
++	}
++
++	rtdm_mutex_unlock(&client->heaps.mutex);
++	return ret;
++}
++
++static noinline int i2cdev_get_cfg(rtdm_user_info_t * user_info,
++				   struct rti2c_client *client,
++				   void __user * arg)
++{
++	if (client_is_out_of_memory(client))
++		return -ENOMEM;
++
++	if (user_info) {
++		return rtdm_copy_to_user(user_info, arg, &client->cfg,
++					 sizeof(struct rti2c_config));
++	}
++	else {
++		memcpy(arg, &client->cfg, sizeof(struct rti2c_config));
++		return  0;
++	}
++}
++
++static noinline int i2cdev_set_cfg(rtdm_user_info_t * user_info,
++				   struct rti2c_client *client,
++				   void __user * arg)
++{
++	struct rti2c_config cfg;
++	if (user_info) {
++		if (rtdm_copy_from_user(user_info, &cfg, arg, sizeof(struct rti2c_config)))
++			return -EFAULT;
++	}
++	else {
++		memcpy(&cfg, arg, sizeof(struct rti2c_config));
++	}
++	
++	if (cfg.max_msgs > I2C_RDRW_IOCTL_MAX_MSGS)
++		return -EINVAL;
++
++	if (cfg.max_msgsize > MAX_I2C_MSG_LEN) 
++		return -EINVAL;
++
++	if (   client->cfg.max_msgs != cfg.max_msgs 
++	    || client->cfg.max_msgsize != cfg.max_msgsize
++	    || client_is_out_of_memory(client))
++	{
++		rti2c_heaps_destroy(client);
++		memcpy(&client->cfg, &cfg, sizeof(struct rti2c_config)); 
++		return rti2c_heaps_create(client);
++	}
++
++	return 0;
++}
++
++static noinline int i2cdev_ioctl_rdrw(rtdm_user_info_t * user_info, struct rti2c_client *client,
++		void __user * arg)
++{
++	struct i2c_rdwr_ioctl_data rdwr_arg;
++	int i, res;
++
++	if (client_is_out_of_memory(client)) {
++		return -ENOMEM;
++	}
++
++	if (user_info) {
++		if (rtdm_copy_from_user(user_info, &rdwr_arg, arg, sizeof(rdwr_arg)))
++			return -EFAULT;
++	}
++	else {
++		memcpy(&rdwr_arg, arg, sizeof(rdwr_arg));
++	}
++
++	/* Put an arbitrary limit on the number of messages that can
++	 * be sent at once */
++	if (rdwr_arg.nmsgs > client->cfg.max_msgs)
++		return -EINVAL;
++
++	if (user_info) {
++		if (rtdm_copy_from_user(user_info, client->heaps.msgs,
++					rdwr_arg.msgs,
++					rdwr_arg.nmsgs * sizeof(struct i2c_msg)))
++			return -EFAULT;
++	}
++	else {
++		memcpy(client->heaps.msgs, rdwr_arg.msgs,
++		       rdwr_arg.nmsgs * sizeof(struct i2c_msg));
++	}
++
++	res = 0;
++	for (i = 0; i < rdwr_arg.nmsgs; i++) {
++		/* Limit the size of the message to a sane amount */
++		if (client->heaps.msgs[i].len > client->cfg.max_msgsize)
++			return -EINVAL;
++
++		client->heaps.msgs_buf[i] = client->heaps.msgs[i].buf;
++		client->heaps.msgs[i].buf = client->heaps.msgs_data 
++					  + client->cfg.max_msgsize * i;
++
++		if (user_info) {
++			if (rtdm_copy_from_user(user_info, client->heaps.msgs[i].buf,
++						client->heaps.msgs_buf[i],
++						client->heaps.msgs[i].len))
++				return -EFAULT;
++		}
++		else {
++			memcpy(client->heaps.msgs[i].buf,
++			       client->heaps.msgs_buf[i],
++			       client->heaps.msgs[i].len);
++		}
++	}
++
++	res = rti2c_transfer(client->adapter, client->heaps.msgs, rdwr_arg.nmsgs);
++	while (i-- > 0) {
++		if (res >= 0 && (client->heaps.msgs[i].flags & I2C_M_RD)) {
++			if (user_info) {
++				if (rtdm_copy_to_user(user_info,
++						      client->heaps.msgs_buf[i],
++						      client->heaps.msgs[i].buf,
++						      client->heaps.msgs[i].len))
++					return -EFAULT;
++			}
++			else {
++				memcpy(client->heaps.msgs_buf[i],
++				       client->heaps.msgs[i].buf,
++				       client->heaps.msgs[i].len);
++			}
++		}
++	}
++	return res;
++}
++
++static int rti2c_ioctl(struct rtdm_dev_context *context, rtdm_user_info_t * user_info,unsigned int request, void *arg)
++{
++	int ret = 0;
++	struct rti2c_client *client = (struct rti2c_client *)rtdm_context_to_private(context);
++	unsigned long funcs;
++
++	rtdm_mutex_lock(&client->heaps.mutex);
++
++	RTI2C_DBG("i2c-dev[d]: ioctl, cmd=0x%02x\n", request);
++
++	switch (request) {
++	case I2C_SLAVE:
++	case I2C_SLAVE_FORCE:
++		if (((unsigned long)arg > 0x3ff) ||
++		    (((client->flags & I2C_M_TEN) == 0) && (unsigned long)arg > 0x7f)) {
++			ret = -EINVAL;
++			break;
++		}
++		client->addr = (unsigned long)arg;
++		RTI2C_DBG("ioctl,I2C_SLAVE addr=0x%02x\n", arg);
++		break;
++	case I2C_TENBIT:
++		if (arg)
++			client->flags |= I2C_M_TEN;
++		else
++			client->flags &= ~I2C_M_TEN;
++		break;
++	case I2C_FUNCS:
++		funcs = client->adapter->algo->functionality(client->adapter);
++		ret = put_user(funcs, (unsigned long __user *)arg);
++		break;
++
++	case I2C_RDWR:
++		ret = i2cdev_ioctl_rdrw(user_info, client, arg);
++		break;
++
++	case I2C_RETRIES:
++		client->adapter->retries = (unsigned long)arg;
++		break;
++
++	case I2C_TIMEOUT:
++		/* For historical reasons, user-space sets the timeout
++		 * value in units of 10 ms.
++		 */
++		client->adapter->timeout_ns = MS_TO_NS((unsigned long)arg * 10);
++		break;
++	case RTI2C_GET_CFG:
++		ret = i2cdev_get_cfg(user_info, client, arg);
++		break;
++	case RTI2C_SET_CFG:
++		ret = i2cdev_set_cfg(user_info, client, arg);
++		break;
++	default:
++		ret = -EINVAL;
++		break;
++	}
++
++	rtdm_mutex_unlock(&client->heaps.mutex);
++	return ret;
++}
++
++static const struct rti2c_config config_tmpl = {
++	.max_msgsize = 32,
++	.max_msgs =  16, /*I2C_RDRW_IOCTL_MAX_MSGS*/
++};
++
++int rti2c_heaps_create(struct rti2c_client *client) {
++	client->heaps.msgs = rtdm_malloc(client->cfg.max_msgs * sizeof(*client->heaps.msgs));
++	if (!client->heaps.msgs) 
++		goto error;
++	memset(client->heaps.msgs, 0, client->cfg.max_msgs * sizeof(*client->heaps.msgs)); 
++
++	client->heaps.msgs_data = rtdm_malloc(client->cfg.max_msgs * client->cfg.max_msgsize);
++	if (!client->heaps.msgs_data) {
++		rtdm_free(client->heaps.msgs);
++		goto error;
++	}
++	memset(client->heaps.msgs_data, 0, client->cfg.max_msgs * client->cfg.max_msgsize);
++
++	client->heaps.msgs_buf = rtdm_malloc(client->cfg.max_msgs * sizeof(u8*));
++	if (!client->heaps.msgs_buf) {
++		rtdm_free(client->heaps.msgs_data);
++		rtdm_free(client->heaps.msgs);
++		goto error;
++	}
++	memset(client->heaps.msgs_buf, 0, client->cfg.max_msgs * sizeof(u8*));
++	return 0;
++
++error:
++	client->heaps.msgs = NULL;
++	client->heaps.msgs_data = NULL;
++	client->heaps.msgs_buf = NULL;
++	return -ENOMEM;
++}
++
++void rti2c_heaps_destroy(struct rti2c_client *client) {
++	rtdm_free(client->heaps.msgs_buf);
++	rtdm_free(client->heaps.msgs_data);
++	rtdm_free(client->heaps.msgs);
++}
++
++static int rti2c_open_nrt(struct rtdm_dev_context *context, rtdm_user_info_t *user_info_t, int oflags)
++{
++	struct rti2c_client *client = (struct rti2c_client *)rtdm_context_to_private(context);
++	struct rti2c_adapter *adap;
++	int ret;
++
++	RTI2C_DBG("rti2c_open_nrt start\n");
++	adap = rti2c_get_adapter(context->device->device_id);
++	if (!adap)
++		return -ENODEV;
++
++	snprintf(client->name, I2C_NAME_SIZE, "i2c-dev %d", adap->nr);
++
++	client->adapter = adap;
++	memcpy(&client->cfg, &config_tmpl, sizeof(struct rti2c_config));
++
++	ret = rti2c_heaps_create(client);
++	if (ret < 0)
++		return ret;
++
++	rtdm_mutex_init(&client->heaps.mutex);
++	return 0;
++}
++
++static int rti2c_open(struct rtdm_dev_context *context, rtdm_user_info_t *user_info_t, int oflags)
++{
++	struct rti2c_client *client = (struct rti2c_client *)rtdm_context_to_private(context);
++	struct rti2c_adapter *adap;
++	int ret;
++
++	RTI2C_DBG("rti2c_open_rt start\n");
++
++	adap = rti2c_get_adapter(context->device->device_id);
++	if (!adap)
++		return -ENODEV;
++
++	snprintf(client->name, I2C_NAME_SIZE, "i2c-dev %d", adap->nr);
++
++	client->adapter = adap;
++	memcpy(&client->cfg, &config_tmpl, sizeof(struct rti2c_config));
++
++	ret = rti2c_heaps_create(client);
++	if (ret < 0)
++		return ret;
++
++	rtdm_mutex_init(&client->heaps.mutex);
++	return 0;
++}
++
++static void rti2c_close_nrt(struct rtdm_dev_context *context, rtdm_user_info_t * user_info)
++{
++	RTI2C_DBG("rti2c_close_nrt close\n");
++	struct rti2c_client *client = (struct rti2c_client *)rtdm_context_to_private(context);
++	rti2c_heaps_destroy(client);
++	rtdm_mutex_destroy(&client->heaps.mutex);
++
++	rti2c_put_adapter(client->adapter);
++}
++
++static void rti2c_close(struct rtdm_dev_context *context, rtdm_user_info_t * user_info)
++{
++	RTI2C_DBG("rti2c_close_rt start\n");
++	struct rti2c_client *client = (struct rti2c_client *)rtdm_context_to_private(context);
++	rti2c_heaps_destroy(client);
++	rtdm_mutex_destroy(&client->heaps.mutex);
++
++	rti2c_put_adapter(client->adapter);
++}
++
++static const struct rtdm_device device_tmpl = {
++	.struct_version		= RTDM_DEVICE_STRUCT_VER,
++
++	.device_flags		= RTDM_NAMED_DEVICE,
++	.context_size		= sizeof(struct rti2c_client),
++	.device_name		= "",
++
++	.open_rt			= rti2c_open,
++	.open_nrt			= rti2c_open_nrt,
++	.ops = {
++		.close_rt		= rti2c_close,
++		.close_nrt		= rti2c_close_nrt,
++		.ioctl_rt	= rti2c_ioctl,
++		.read_rt	= rti2c_read,
++		.write_rt	= rti2c_write,
++	},
++
++	.device_class		= RTDM_CLASS_I2C,
++	.device_sub_class	= RTDM_SUBCLASS_GENERIC,
++	.profile_version	= 0,
++	.driver_name		= RT_I2C_DRIVER_NAME,
++	.driver_version		= RTDM_DRIVER_VER(1, 0, 0),
++	.peripheral_name	= "I2C",
++	.provider_name		= "Xie Linfei",
++};
++
++static struct rtdm_device* rti2c_device_create(int nr)
++{
++	struct rtdm_device* dev;
++	int ret;
++
++	dev = rtdm_malloc(sizeof *dev);
++	if (!dev)
++		return ERR_PTR(-ENOMEM);
++
++	memcpy(dev, &device_tmpl, sizeof(struct rtdm_device)); 
++	snprintf(dev->device_name, sizeof dev->device_name, "i2c-%d", nr);
++	dev->proc_name = dev->device_name;
++	dev->device_id = nr;
++
++	ret = rtdm_dev_register(dev);
++	if (!ret) {
++		return dev; 
++	}
++	else {
++		rtdm_free(dev);
++		return ERR_PTR(ret);
++	}
++}
++
++static void rti2c_device_destroy(struct rtdm_device* dev)
++{
++	rtdm_dev_unregister(dev, 0 /* poll delay*/);
++	rtdm_free(dev);
++}
++
++struct rti2c_adapter *rti2c_get_adapter(int nr)
++{
++	struct rti2c_adapter *adapter;
++
++	mutex_lock(&core_lock);
++	adapter = idr_find(&i2c_adapter_idr, nr);
++	if (adapter && !try_module_get(adapter->owner))
++		adapter = NULL;
++
++	mutex_unlock(&core_lock);
++	return adapter;
++}
++
++void rti2c_put_adapter(struct rti2c_adapter *adap)
++{
++	if (adap)
++		module_put(adap->owner);
++}
++
++/**
++ * i2c_add_adapter - declare i2c adapter, use dynamic bus number
++ * @adapter: the adapter to add
++ * Context: can sleep
++ *
++ * This routine is used to declare an I2C adapter when its bus number
++ * doesn't matter or when its bus number is specified by an dt alias.
++ * Examples of bases when the bus number doesn't matter: I2C adapters
++ * dynamically added by USB links or PCI plugin cards.
++ *
++ * When this returns zero, a new bus number was allocated and stored
++ * in adap->nr, and the specified adapter became available for clients.
++ * Otherwise, a negative errno value is returned.
++ */
++int rti2c_add_adapter(struct rti2c_adapter *adapter)
++{
++	int	id, res = 0;
++
++retry:
++	if (idr_pre_get(&i2c_adapter_idr, GFP_KERNEL) == 0)
++		return -ENOMEM;
++
++	mutex_lock(&core_lock);
++	/* "above" here means "above or equal to", sigh */
++	res = idr_get_new_above(&i2c_adapter_idr, adapter,
++				__i2c_first_dynamic_bus_num, &id);
++	mutex_unlock(&core_lock);
++
++	if (res < 0) {
++		if (res == -EAGAIN)
++			goto retry;
++		return res;
++	}
++
++	adapter->nr = id;
++	return rti2c_register_adapter(adapter);
++}
++EXPORT_SYMBOL(rti2c_add_adapter);
++
++/**
++ * i2c_add_numbered_adapter - declare i2c adapter, use static bus number
++ * @adap: the adapter to register (with adap->nr initialized)
++ * Context: can sleep
++ *
++ * This routine is used to declare an I2C adapter when its bus number
++ * matters.  For example, use it for I2C adapters from system-on-chip CPUs,
++ * or otherwise built in to the system's mainboard, and where i2c_board_info
++ * is used to properly configure I2C devices.
++ *
++ * If the requested bus number is set to -1, then this function will behave
++ * identically to i2c_add_adapter, and will dynamically assign a bus number.
++ *
++ * If no devices have pre-been declared for this bus, then be sure to
++ * register the adapter before any dynamically allocated ones.  Otherwise
++ * the required bus ID may not be available.
++ *
++ * When this returns zero, the specified adapter became available for
++ * clients using the bus number provided in adap->nr.  Also, the table
++ * of I2C devices pre-declared using i2c_register_board_info() is scanned,
++ * and the appropriate driver model device nodes are created.  Otherwise, a
++ * negative errno value is returned.
++ */
++int rti2c_add_numbered_adapter(struct rti2c_adapter *adap)
++{
++	int	id;
++	int	status;
++	
++	if (adap->nr == -1) /* -1 means dynamically assign bus id */{
++		RTI2C_DBG("adapter nr[%d]\n", adap->nr);
++		return rti2c_add_adapter(adap);
++	}
++	if (adap->nr & ~MAX_ID_MASK) {
++		RTI2C_ERR("invalid number [%d]\n", adap->nr);
++		return -EINVAL;
++	}
++
++retry:
++	if (idr_pre_get(&i2c_adapter_idr, GFP_KERNEL) == 0) {
++		RTI2C_ERR("no memory\n");
++		return -ENOMEM;
++	}
++
++	mutex_lock(&core_lock);
++	/* "above" here means "above or equal to", sigh;
++	 * we need the "equal to" result to force the result
++	 */
++	status = idr_get_new_above(&i2c_adapter_idr, adap, adap->nr, &id);
++	if (status == 0 && id != adap->nr) {
++		status = -EBUSY;
++		idr_remove(&i2c_adapter_idr, id);
++	}
++	mutex_unlock(&core_lock);
++	if (status == -EAGAIN)
++		goto retry;
++
++	if (status == 0)
++		status = rti2c_register_adapter(adap);
++	return status;
++}
++EXPORT_SYMBOL_GPL(rti2c_add_numbered_adapter);
++
++
++int rti2c_register_adapter(struct rti2c_adapter *adap)
++{
++	/* Sanity check */
++	if (   unlikely(!adap->algo) 
++	    || unlikely(!adap->algo->master_xfer) 
++	    || unlikely(!adap->algo->functionality)) {
++		RTI2C_ERR("i2c-core: Attempt to register adapter '%s' with "
++		       "no algo!\n", adap->name);
++		return -EINVAL;
++	}
++
++	rtdm_mutex_init(&adap->bus_lock);
++
++	/* Set default timeout to 1 second if not already set */
++	if (adap->timeout_ns == 0)
++		adap->timeout_ns = MS_TO_NS(1000);
++
++	snprintf(adap->name, sizeof adap->name, "i2c-%d", adap->nr);
++
++	adap->rtdm_dev = rti2c_device_create(adap->nr);
++	if (IS_ERR(adap->rtdm_dev)) {
++		rtdm_mutex_destroy(&adap->bus_lock);
++		return PTR_ERR(adap->rtdm_dev);
++	}
++
++	RTI2C_DBG("i2c-dev[d]: adapter [%s] registered as minor %d\n",
++		 adap->name, adap->nr);
++	return 0;
++}
++
++/**
++ * i2c_del_adapter - unregister I2C adapter
++ * @adap: the adapter being unregistered
++ * Context: can sleep
++ *
++ * This unregisters an I2C adapter which was previously registered
++ * by @i2c_add_adapter or @i2c_add_numbered_adapter.
++ */
++void rti2c_del_adapter(struct rti2c_adapter *adap)
++{
++	struct rti2c_adapter *found;
++
++	rti2c_device_destroy(adap->rtdm_dev);
++
++	rtdm_mutex_destroy(&adap->bus_lock);
++
++	RTI2C_DBG("i2c-dev[d]: adapter [%s] unregistered\n", adap->name);
++
++	/* First make sure that this adapter was ever added */
++	mutex_lock(&core_lock);
++	found = idr_find(&i2c_adapter_idr, adap->nr);
++	if (found == adap)
++		idr_remove(&i2c_adapter_idr, adap->nr);
++	mutex_unlock(&core_lock); 
++	if (found != adap) {
++		pr_debug("i2c-core: attempting to delete unregistered "
++			 "adapter [%s]\n", adap->name);
++		return;
++	}
++	RTI2C_DBG("rti2c[d]: adapter [%s] unregistered\n", adap->name);
++}
++EXPORT_SYMBOL(rti2c_del_adapter);
++/* ------------------------------------------------------------------------- */
++
++/*
++ * module load/unload record keeping
++ */
++
++static int __init i2c_dev_init(void)
++{
++	return 0;
++}
++
++static void __exit i2c_dev_exit(void)
++{
++}
++
++MODULE_AUTHOR("Frodo Looijaard <frodol@dds.nl> and "
++		"Simon G. Vogl <simon@tk.uni-linz.ac.at>");
++MODULE_DESCRIPTION("I2C /dev entries driver");
++MODULE_LICENSE("GPL");
++
++module_init(i2c_dev_init);
++module_exit(i2c_dev_exit);
+diff --git a/ksrc/drivers/i2c/rti2c-omap.c b/ksrc/drivers/i2c/rti2c-omap.c
+new file mode 100644
+index 0000000..2119025
+--- /dev/null
++++ b/ksrc/drivers/i2c/rti2c-omap.c
+@@ -0,0 +1,1327 @@
++/*
++ * TI OMAP I2C master mode driver
++ *
++ * Copyright (C) 2003 MontaVista Software, Inc.
++ * Copyright (C) 2005 Nokia Corporation
++ * Copyright (C) 2004 - 2007 Texas Instruments.
++ * Copyright (C) 2014 Matthias Schneider <ma30002000@yahoo.de>
++ *
++ * Originally written by MontaVista Software, Inc. as a Linux device driver.
++ * 
++ * Ported to RTDM by Matthias Schneider
++ * 
++ * Additional contributions by:
++ *	Tony Lindgren <tony@atomide.com>
++ *	Imre Deak <imre.deak@nokia.com>
++ *	Juha YrjÃ¶lÃ¤ <juha.yrjola@solidboot.com>
++ *	Syed Khasim <x0khasim@ti.com>
++ *	Nishant Menon <nm@ti.com>
++ * 
++ * Xenomai is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * Xenomai is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with Xenomai; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#include <linux/module.h>
++#include <linux/delay.h>
++#include <linux/i2c.h>
++#include <linux/err.h>
++#include <linux/interrupt.h>
++#include <linux/completion.h>
++#include <linux/platform_device.h>
++#include <linux/clk.h>
++#include <linux/io.h>
++#include <linux/of.h>
++#include <linux/of_device.h>
++#include <linux/slab.h>
++#include <linux/i2c-omap.h>
++#include <linux/pm_runtime.h>
++
++#include <xenomai/rtdm/driver.h>
++#include <xenomai/rtdm/i2c.h>
++#include "../rti2c.h"
++
++/* I2C controller revisions */
++#define OMAP_I2C_OMAP1_REV_2		0x20
++
++/* I2C controller revisions present on specific hardware */
++#define OMAP_I2C_REV_ON_2430		0x00000036
++#define OMAP_I2C_REV_ON_3430_3530	0x0000003C
++#define OMAP_I2C_REV_ON_3630		0x00000040
++#define OMAP_I2C_REV_ON_4430_PLUS	0x50400002
++
++/* timeout waiting for the controller to respond */
++#define OMAP_I2C_TIMEOUT_NS (MS_TO_NS(1000))
++
++/* timeout for pm runtime autosuspend */
++#define OMAP_I2C_PM_TIMEOUT		1000	/* ms */
++
++/* For OMAP3 I2C_IV has changed to I2C_WE (wakeup enable) */
++enum {
++	OMAP_I2C_REV_REG = 0,
++	OMAP_I2C_IE_REG,
++	OMAP_I2C_STAT_REG,
++	OMAP_I2C_IV_REG,
++	OMAP_I2C_WE_REG,
++	OMAP_I2C_SYSS_REG,
++	OMAP_I2C_BUF_REG,
++	OMAP_I2C_CNT_REG,
++	OMAP_I2C_DATA_REG,
++	OMAP_I2C_SYSC_REG,
++	OMAP_I2C_CON_REG,
++	OMAP_I2C_OA_REG,
++	OMAP_I2C_SA_REG,
++	OMAP_I2C_PSC_REG,
++	OMAP_I2C_SCLL_REG,
++	OMAP_I2C_SCLH_REG,
++	OMAP_I2C_SYSTEST_REG,
++	OMAP_I2C_BUFSTAT_REG,
++	/* only on OMAP4430 */
++	OMAP_I2C_IP_V2_REVNB_LO,
++	OMAP_I2C_IP_V2_REVNB_HI,
++	OMAP_I2C_IP_V2_IRQSTATUS_RAW,
++	OMAP_I2C_IP_V2_IRQENABLE_SET,
++	OMAP_I2C_IP_V2_IRQENABLE_CLR,
++};
++
++/* I2C Interrupt Enable Register (OMAP_I2C_IE): */
++#define OMAP_I2C_IE_XDR		(1 << 14)	/* TX Buffer drain int enable */
++#define OMAP_I2C_IE_RDR		(1 << 13)	/* RX Buffer drain int enable */
++#define OMAP_I2C_IE_XRDY	(1 << 4)	/* TX data ready int enable */
++#define OMAP_I2C_IE_RRDY	(1 << 3)	/* RX data ready int enable */
++#define OMAP_I2C_IE_ARDY	(1 << 2)	/* Access ready int enable */
++#define OMAP_I2C_IE_NACK	(1 << 1)	/* No ack interrupt enable */
++#define OMAP_I2C_IE_AL		(1 << 0)	/* Arbitration lost int ena */
++
++/* I2C Status Register (OMAP_I2C_STAT): */
++#define OMAP_I2C_STAT_XDR	(1 << 14)	/* TX Buffer draining */
++#define OMAP_I2C_STAT_RDR	(1 << 13)	/* RX Buffer draining */
++#define OMAP_I2C_STAT_BB	(1 << 12)	/* Bus busy */
++#define OMAP_I2C_STAT_ROVR	(1 << 11)	/* Receive overrun */
++#define OMAP_I2C_STAT_XUDF	(1 << 10)	/* Transmit underflow */
++#define OMAP_I2C_STAT_AAS	(1 << 9)	/* Address as slave */
++#define OMAP_I2C_STAT_AD0	(1 << 8)	/* Address zero */
++#define OMAP_I2C_STAT_XRDY	(1 << 4)	/* Transmit data ready */
++#define OMAP_I2C_STAT_RRDY	(1 << 3)	/* Receive data ready */
++#define OMAP_I2C_STAT_ARDY	(1 << 2)	/* Register access ready */
++#define OMAP_I2C_STAT_NACK	(1 << 1)	/* No ack interrupt enable */
++#define OMAP_I2C_STAT_AL	(1 << 0)	/* Arbitration lost int ena */
++
++/* I2C WE wakeup enable register */
++#define OMAP_I2C_WE_XDR_WE	(1 << 14)	/* TX drain wakup */
++#define OMAP_I2C_WE_RDR_WE	(1 << 13)	/* RX drain wakeup */
++#define OMAP_I2C_WE_AAS_WE	(1 << 9)	/* Address as slave wakeup*/
++#define OMAP_I2C_WE_BF_WE	(1 << 8)	/* Bus free wakeup */
++#define OMAP_I2C_WE_STC_WE	(1 << 6)	/* Start condition wakeup */
++#define OMAP_I2C_WE_GC_WE	(1 << 5)	/* General call wakeup */
++#define OMAP_I2C_WE_DRDY_WE	(1 << 3)	/* TX/RX data ready wakeup */
++#define OMAP_I2C_WE_ARDY_WE	(1 << 2)	/* Reg access ready wakeup */
++#define OMAP_I2C_WE_NACK_WE	(1 << 1)	/* No acknowledgment wakeup */
++#define OMAP_I2C_WE_AL_WE	(1 << 0)	/* Arbitration lost wakeup */
++
++#define OMAP_I2C_WE_ALL		(OMAP_I2C_WE_XDR_WE | OMAP_I2C_WE_RDR_WE | \
++				OMAP_I2C_WE_AAS_WE | OMAP_I2C_WE_BF_WE | \
++				OMAP_I2C_WE_STC_WE | OMAP_I2C_WE_GC_WE | \
++				OMAP_I2C_WE_DRDY_WE | OMAP_I2C_WE_ARDY_WE | \
++				OMAP_I2C_WE_NACK_WE | OMAP_I2C_WE_AL_WE)
++
++/* I2C Buffer Configuration Register (OMAP_I2C_BUF): */
++#define OMAP_I2C_BUF_RDMA_EN	(1 << 15)	/* RX DMA channel enable */
++#define OMAP_I2C_BUF_RXFIF_CLR	(1 << 14)	/* RX FIFO Clear */
++#define OMAP_I2C_BUF_XDMA_EN	(1 << 7)	/* TX DMA channel enable */
++#define OMAP_I2C_BUF_TXFIF_CLR	(1 << 6)	/* TX FIFO Clear */
++
++/* I2C Configuration Register (OMAP_I2C_CON): */
++#define OMAP_I2C_CON_EN		(1 << 15)	/* I2C module enable */
++#define OMAP_I2C_CON_BE		(1 << 14)	/* Big endian mode */
++#define OMAP_I2C_CON_OPMODE_HS	(1 << 12)	/* High Speed support */
++#define OMAP_I2C_CON_STB	(1 << 11)	/* Start byte mode (master) */
++#define OMAP_I2C_CON_MST	(1 << 10)	/* Master/slave mode */
++#define OMAP_I2C_CON_TRX	(1 << 9)	/* TX/RX mode (master only) */
++#define OMAP_I2C_CON_XA		(1 << 8)	/* Expand address */
++#define OMAP_I2C_CON_RM		(1 << 2)	/* Repeat mode (master only) */
++#define OMAP_I2C_CON_STP	(1 << 1)	/* Stop cond (master only) */
++#define OMAP_I2C_CON_STT	(1 << 0)	/* Start condition (master) */
++
++/* I2C SCL time value when Master */
++#define OMAP_I2C_SCLL_HSSCLL	8
++#define OMAP_I2C_SCLH_HSSCLH	8
++
++/* I2C System Test Register (OMAP_I2C_SYSTEST): */
++#ifdef DEBUG
++#define OMAP_I2C_SYSTEST_ST_EN		(1 << 15)	/* System test enable */
++#define OMAP_I2C_SYSTEST_FREE		(1 << 14)	/* Free running mode */
++#define OMAP_I2C_SYSTEST_TMODE_MASK	(3 << 12)	/* Test mode select */
++#define OMAP_I2C_SYSTEST_TMODE_SHIFT	(12)		/* Test mode select */
++#define OMAP_I2C_SYSTEST_SCL_I		(1 << 3)	/* SCL line sense in */
++#define OMAP_I2C_SYSTEST_SCL_O		(1 << 2)	/* SCL line drive out */
++#define OMAP_I2C_SYSTEST_SDA_I		(1 << 1)	/* SDA line sense in */
++#define OMAP_I2C_SYSTEST_SDA_O		(1 << 0)	/* SDA line drive out */
++#endif
++
++/* OCP_SYSSTATUS bit definitions */
++#define SYSS_RESETDONE_MASK		(1 << 0)
++
++/* OCP_SYSCONFIG bit definitions */
++#define SYSC_CLOCKACTIVITY_MASK		(0x3 << 8)
++#define SYSC_SIDLEMODE_MASK		(0x3 << 3)
++#define SYSC_ENAWAKEUP_MASK		(1 << 2)
++#define SYSC_SOFTRESET_MASK		(1 << 1)
++#define SYSC_AUTOIDLE_MASK		(1 << 0)
++
++#define SYSC_IDLEMODE_SMART		0x2
++#define SYSC_CLOCKACTIVITY_FCLK		0x2
++
++/* Errata definitions */
++#define I2C_OMAP_ERRATA_I207		(1 << 0)
++#define I2C_OMAP_ERRATA_I462		(1 << 1)
++
++#define OMAP_I2C_IP_V2_INTERRUPTS_MASK	0x6FFF
++
++struct omap_i2c_dev {
++	rtdm_lock_t		lock;		/* IRQ synchronization */
++	struct device		*dev;
++	void __iomem		*base;		/* virtual */
++	int			irq;
++	rtdm_irq_t		irq_handle;
++	int			reg_shift;      /* bit shift for I2C register addresses */
++	rtdm_event_t		cmd_complete;
++	struct resource		*ioarea;
++	u32			latency;	/* maximum mpu wkup latency */
++	void			(*set_mpu_wkup_lat)(struct device *dev,
++						    long latency);
++	u32			speed;		/* Speed of bus in kHz */
++	u32			flags;
++	u16			scheme;
++	u16			cmd_err;
++	u8			*buf;
++	u8			*regs;
++	size_t			buf_len;
++	struct rti2c_adapter	adapter;
++	u8			threshold;
++	u8			fifo_size;	/* use as flag and value
++						 * fifo_size==0 implies no fifo
++						 * if set, should be trsh+1
++						 */
++	u32			rev;
++	unsigned		b_hw:1;		/* bad h/w fixes */
++	unsigned		receiver:1;	/* true when we're in receiver mode */
++	u16			iestate;	/* Saved interrupt register */
++	u16			pscstate;
++	u16			scllstate;
++	u16			sclhstate;
++	u16			syscstate;
++	u16			westate;
++	u16			errata;
++};
++
++static const u8 reg_map_ip_v1[] = {
++	[OMAP_I2C_REV_REG] = 0x00,
++	[OMAP_I2C_IE_REG] = 0x01,
++	[OMAP_I2C_STAT_REG] = 0x02,
++	[OMAP_I2C_IV_REG] = 0x03,
++	[OMAP_I2C_WE_REG] = 0x03,
++	[OMAP_I2C_SYSS_REG] = 0x04,
++	[OMAP_I2C_BUF_REG] = 0x05,
++	[OMAP_I2C_CNT_REG] = 0x06,
++	[OMAP_I2C_DATA_REG] = 0x07,
++	[OMAP_I2C_SYSC_REG] = 0x08,
++	[OMAP_I2C_CON_REG] = 0x09,
++	[OMAP_I2C_OA_REG] = 0x0a,
++	[OMAP_I2C_SA_REG] = 0x0b,
++	[OMAP_I2C_PSC_REG] = 0x0c,
++	[OMAP_I2C_SCLL_REG] = 0x0d,
++	[OMAP_I2C_SCLH_REG] = 0x0e,
++	[OMAP_I2C_SYSTEST_REG] = 0x0f,
++	[OMAP_I2C_BUFSTAT_REG] = 0x10,
++};
++
++static const u8 reg_map_ip_v2[] = {
++	[OMAP_I2C_REV_REG] = 0x04,
++	[OMAP_I2C_IE_REG] = 0x2c,
++	[OMAP_I2C_STAT_REG] = 0x28,
++	[OMAP_I2C_IV_REG] = 0x34,
++	[OMAP_I2C_WE_REG] = 0x34,
++	[OMAP_I2C_SYSS_REG] = 0x90,
++	[OMAP_I2C_BUF_REG] = 0x94,
++	[OMAP_I2C_CNT_REG] = 0x98,
++	[OMAP_I2C_DATA_REG] = 0x9c,
++	[OMAP_I2C_SYSC_REG] = 0x10,
++	[OMAP_I2C_CON_REG] = 0xa4,
++	[OMAP_I2C_OA_REG] = 0xa8,
++	[OMAP_I2C_SA_REG] = 0xac,
++	[OMAP_I2C_PSC_REG] = 0xb0,
++	[OMAP_I2C_SCLL_REG] = 0xb4,
++	[OMAP_I2C_SCLH_REG] = 0xb8,
++	[OMAP_I2C_SYSTEST_REG] = 0xbC,
++	[OMAP_I2C_BUFSTAT_REG] = 0xc0,
++	[OMAP_I2C_IP_V2_REVNB_LO] = 0x00,
++	[OMAP_I2C_IP_V2_REVNB_HI] = 0x04,
++	[OMAP_I2C_IP_V2_IRQSTATUS_RAW] = 0x24,
++	[OMAP_I2C_IP_V2_IRQENABLE_SET] = 0x2c,
++	[OMAP_I2C_IP_V2_IRQENABLE_CLR] = 0x30,
++};
++
++static inline void omap_i2c_write_reg(struct omap_i2c_dev *i2c_dev,
++				      int reg, u16 val)
++{
++	writew_relaxed(val, i2c_dev->base +
++			(i2c_dev->regs[reg] << i2c_dev->reg_shift));
++}
++
++static inline u16 omap_i2c_read_reg(struct omap_i2c_dev *i2c_dev, int reg)
++{
++	return readw_relaxed(i2c_dev->base +
++				(i2c_dev->regs[reg] << i2c_dev->reg_shift));
++}
++
++static void __omap_i2c_init(struct omap_i2c_dev *dev)
++{
++
++	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, 0);
++
++	/* Setup clock prescaler to obtain approx 12MHz I2C module clock: */
++	omap_i2c_write_reg(dev, OMAP_I2C_PSC_REG, dev->pscstate);
++
++	/* SCL low and high time values */
++	omap_i2c_write_reg(dev, OMAP_I2C_SCLL_REG, dev->scllstate);
++	omap_i2c_write_reg(dev, OMAP_I2C_SCLH_REG, dev->sclhstate);
++	if (dev->rev >= OMAP_I2C_REV_ON_3430_3530)
++		omap_i2c_write_reg(dev, OMAP_I2C_WE_REG, dev->westate);
++
++	/* Take the I2C module out of reset: */
++	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, OMAP_I2C_CON_EN);
++
++	/*
++	 * Don't write to this register if the IE state is 0 as it can
++	 * cause deadlock.
++	 */
++	if (dev->iestate)
++		omap_i2c_write_reg(dev, OMAP_I2C_IE_REG, dev->iestate);
++}
++
++static int omap_i2c_reset(struct omap_i2c_dev *dev)
++{
++	nanosecs_abs_t timeout;
++	u16 sysc;
++
++	if (dev->rev >= OMAP_I2C_OMAP1_REV_2) {
++		sysc = omap_i2c_read_reg(dev, OMAP_I2C_SYSC_REG);
++
++		/* Disable I2C controller before soft reset */
++		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG,
++			omap_i2c_read_reg(dev, OMAP_I2C_CON_REG) &
++				~(OMAP_I2C_CON_EN));
++
++		omap_i2c_write_reg(dev, OMAP_I2C_SYSC_REG, SYSC_SOFTRESET_MASK);
++		/* For some reason we need to set the EN bit before the
++		 * reset done bit gets set. */
++		timeout = rtdm_clock_read() + OMAP_I2C_TIMEOUT_NS;
++		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, OMAP_I2C_CON_EN);
++		while (!(omap_i2c_read_reg(dev, OMAP_I2C_SYSS_REG) &
++			 SYSS_RESETDONE_MASK)) {
++			if (time_after_ns(rtdm_clock_read(), timeout)) {
++				rtdm_printk("omap[w]: timeout waiting "
++						"for controller reset\n");
++				return -ETIMEDOUT;
++			}
++			/* we do not care about EINTR since we sleep only to
++			   relax cpu */
++			rtdm_task_sleep(MS_TO_NS(1));
++		}
++
++		/* SYSC register is cleared by the reset; rewrite it */
++		omap_i2c_write_reg(dev, OMAP_I2C_SYSC_REG, sysc);
++
++	}
++	return 0;
++}
++
++static int omap_i2c_init(struct omap_i2c_dev *dev)
++{
++	u16 psc = 0, scll = 0, sclh = 0;
++	u16 fsscll = 0, fssclh = 0, hsscll = 0, hssclh = 0;
++	unsigned long fclk_rate = 12000000;
++	unsigned long internal_clk = 0;
++	struct clk *fclk;
++
++	if (dev->rev >= OMAP_I2C_REV_ON_3430_3530) {
++		/*
++		 * Enabling all wakup sources to stop I2C freezing on
++		 * WFI instruction.
++		 * REVISIT: Some wkup sources might not be needed.
++		 */
++		dev->westate = OMAP_I2C_WE_ALL;
++	}
++
++	if (dev->flags & OMAP_I2C_FLAG_ALWAYS_ARMXOR_CLK) {
++		/*
++		 * The I2C functional clock is the armxor_ck, so there's
++		 * no need to get "armxor_ck" separately.  Now, if OMAP2420
++		 * always returns 12MHz for the functional clock, we can
++		 * do this bit unconditionally.
++		 */
++		fclk = clk_get(dev->dev, "fck");
++		fclk_rate = clk_get_rate(fclk);
++		clk_put(fclk);
++
++		/* TRM for 5912 says the I2C clock must be prescaled to be
++		 * between 7 - 12 MHz. The XOR input clock is typically
++		 * 12, 13 or 19.2 MHz. So we should have code that produces:
++		 *
++		 * XOR MHz	Divider		Prescaler
++		 * 12		1		0
++		 * 13		2		1
++		 * 19.2		2		1
++		 */
++		if (fclk_rate > 12000000)
++			psc = fclk_rate / 12000000;
++	}
++
++	if (!(dev->flags & OMAP_I2C_FLAG_SIMPLE_CLOCK)) {
++
++		/*
++		 * HSI2C controller internal clk rate should be 19.2 Mhz for
++		 * HS and for all modes on 2430. On 34xx we can use lower rate
++		 * to get longer filter period for better noise suppression.
++		 * The filter is iclk (fclk for HS) period.
++		 */
++		if (dev->speed > 400 ||
++			       dev->flags & OMAP_I2C_FLAG_FORCE_19200_INT_CLK)
++			internal_clk = 19200;
++		else if (dev->speed > 100)
++			internal_clk = 9600;
++		else
++			internal_clk = 4000;
++		fclk = clk_get(dev->dev, "fck");
++		fclk_rate = clk_get_rate(fclk) / 1000;
++		clk_put(fclk);
++
++		/* Compute prescaler divisor */
++		psc = fclk_rate / internal_clk;
++		psc = psc - 1;
++
++		/* If configured for High Speed */
++		if (dev->speed > 400) {
++			unsigned long scl;
++
++			/* For first phase of HS mode */
++			scl = internal_clk / 400;
++			fsscll = scl - (scl / 3) - 7;
++			fssclh = (scl / 3) - 5;
++
++			/* For second phase of HS mode */
++			scl = fclk_rate / dev->speed;
++			hsscll = scl - (scl / 3) - 7;
++			hssclh = (scl / 3) - 5;
++		} else if (dev->speed > 100) {
++			unsigned long scl;
++
++			/* Fast mode */
++			scl = internal_clk / dev->speed;
++			fsscll = scl - (scl / 3) - 7;
++			fssclh = (scl / 3) - 5;
++		} else {
++			/* Standard mode */
++			fsscll = internal_clk / (dev->speed * 2) - 7;
++			fssclh = internal_clk / (dev->speed * 2) - 5;
++		}
++		scll = (hsscll << OMAP_I2C_SCLL_HSSCLL) | fsscll;
++		sclh = (hssclh << OMAP_I2C_SCLH_HSSCLH) | fssclh;
++	} else {
++		/* Program desired operating rate */
++		fclk_rate /= (psc + 1) * 1000;
++		if (psc > 2)
++			psc = 2;
++		scll = fclk_rate / (dev->speed * 2) - 7 + psc;
++		sclh = fclk_rate / (dev->speed * 2) - 7 + psc;
++	}
++
++	dev->iestate = (OMAP_I2C_IE_XRDY | OMAP_I2C_IE_RRDY |
++			OMAP_I2C_IE_ARDY | OMAP_I2C_IE_NACK |
++			OMAP_I2C_IE_AL)  | ((dev->fifo_size) ?
++				(OMAP_I2C_IE_RDR | OMAP_I2C_IE_XDR) : 0);
++
++	dev->pscstate = psc;
++	dev->scllstate = scll;
++	dev->sclhstate = sclh;
++
++	__omap_i2c_init(dev);
++
++	return 0;
++}
++
++/*
++ * Waiting on Bus Busy
++ */
++static int omap_i2c_wait_for_bb(struct omap_i2c_dev *dev)
++{
++	nanosecs_abs_t timeout;
++
++	timeout = rtdm_clock_read() + OMAP_I2C_TIMEOUT_NS;
++	while (omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG) & OMAP_I2C_STAT_BB) {
++		if (time_after_ns(rtdm_clock_read(), timeout)) {
++			rtdm_printk("i2c-omap[w]: timeout waiting for bus ready\n");
++			return -ETIMEDOUT;
++		}
++		/* we do not care about EINTR since we sleep only to
++		   relax cpu */
++		rtdm_task_sleep(MS_TO_NS(1));
++	}
++
++
++	return 0;
++}
++
++static void omap_i2c_resize_fifo(struct omap_i2c_dev *dev, u8 size, bool is_rx)
++{
++	u16		buf;
++
++	if (dev->flags & OMAP_I2C_FLAG_NO_FIFO)
++		return;
++
++	/*
++	 * Set up notification threshold based on message size. We're doing
++	 * this to try and avoid draining feature as much as possible. Whenever
++	 * we have big messages to transfer (bigger than our total fifo size)
++	 * then we might use draining feature to transfer the remaining bytes.
++	 */
++
++	dev->threshold = clamp(size, (u8) 1, dev->fifo_size);
++
++	buf = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
++
++	if (is_rx) {
++		/* Clear RX Threshold */
++		buf &= ~(0x3f << 8);
++		buf |= ((dev->threshold - 1) << 8) | OMAP_I2C_BUF_RXFIF_CLR;
++	} else {
++		/* Clear TX Threshold */
++		buf &= ~0x3f;
++		buf |= (dev->threshold - 1) | OMAP_I2C_BUF_TXFIF_CLR;
++	}
++
++	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, buf);
++
++	if (dev->rev < OMAP_I2C_REV_ON_3630)
++		dev->b_hw = 1; /* Enable hardware fixes */
++
++	/* calculate wakeup latency constraint for MPU */
++	if (dev->set_mpu_wkup_lat != NULL)
++		dev->latency = (1000000 * dev->threshold) /
++			(1000 * dev->speed / 8);
++}
++
++/*
++ * Low level master read/write transaction.
++ */
++static int omap_i2c_xfer_msg(struct rti2c_adapter *adap,
++			     struct i2c_msg *msg, int stop)
++{
++	struct omap_i2c_dev *dev = rti2c_get_adapdata(adap);
++	unsigned long timeout;
++	u16 w;
++
++	rtdm_printk("omap[d]: addr: 0x%04x, len: %d, flags: 0x%x, stop: %d\n",
++		msg->addr, msg->len, msg->flags, stop);
++
++	if (msg->len == 0)
++		return -EINVAL;
++
++	dev->receiver = !!(msg->flags & I2C_M_RD);
++	omap_i2c_resize_fifo(dev, msg->len, dev->receiver);
++
++	omap_i2c_write_reg(dev, OMAP_I2C_SA_REG, msg->addr);
++
++	/* REVISIT: Could the STB bit of I2C_CON be used with probing? */
++	dev->buf = msg->buf;
++	dev->buf_len = msg->len;
++
++	/* make sure writes to dev->buf_len are ordered */
++	barrier();
++
++	omap_i2c_write_reg(dev, OMAP_I2C_CNT_REG, dev->buf_len);
++
++	/* Clear the FIFO Buffers */
++	w = omap_i2c_read_reg(dev, OMAP_I2C_BUF_REG);
++	w |= OMAP_I2C_BUF_RXFIF_CLR | OMAP_I2C_BUF_TXFIF_CLR;
++	omap_i2c_write_reg(dev, OMAP_I2C_BUF_REG, w);
++
++	dev->cmd_err = 0;
++
++	w = OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_STT;
++
++	/* High speed configuration */
++	if (dev->speed > 400)
++		w |= OMAP_I2C_CON_OPMODE_HS;
++
++	if (msg->flags & I2C_M_STOP)
++		stop = 1;
++	if (msg->flags & I2C_M_TEN)
++		w |= OMAP_I2C_CON_XA;
++	if (!(msg->flags & I2C_M_RD))
++		w |= OMAP_I2C_CON_TRX;
++
++	if (!dev->b_hw && stop)
++		w |= OMAP_I2C_CON_STP;
++
++	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
++
++	/*
++	 * Don't write stt and stp together on some hardware.
++	 */
++	if (dev->b_hw && stop) {
++		nanosecs_abs_t delay = rtdm_clock_read() + OMAP_I2C_TIMEOUT_NS;
++		u16 con = omap_i2c_read_reg(dev, OMAP_I2C_CON_REG);
++		while (con & OMAP_I2C_CON_STT) {
++			con = omap_i2c_read_reg(dev, OMAP_I2C_CON_REG);
++
++			/* Let the user know if i2c is in a bad state */
++			if (time_after_ns(rtdm_clock_read(), delay)) {
++				rtdm_printk("omap[e]: controller timed out "
++				"waiting for start condition to finish\n");
++				return -ETIMEDOUT;
++			}
++			cpu_relax();
++		}
++
++		w |= OMAP_I2C_CON_STP;
++		w &= ~OMAP_I2C_CON_STT;
++		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
++	}
++
++	/*
++	 * REVISIT: We should abort the transfer on signals, but the bus goes
++	 * into arbitration and we're currently unable to recover from it. 
++	 *  
++	 * Note: we react here in a similar way than the linux driver 
++	 */
++	do
++		timeout = rtdm_event_timedwait(&dev->cmd_complete,
++					       OMAP_I2C_TIMEOUT_NS, NULL);
++	while (timeout == -EINTR);
++
++	BUG_ON(timeout == -EIDRM);
++	BUG_ON(timeout == -EPERM);
++	BUG_ON(timeout == -EWOULDBLOCK);
++
++	if (timeout == -ETIMEDOUT) {
++		rtdm_printk("omap[e]: controller timed out\n");
++		omap_i2c_reset(dev);
++		__omap_i2c_init(dev);
++		return -ETIMEDOUT;
++	}
++
++	if (likely(!dev->cmd_err && timeout == 0))
++		return 0;
++
++	/* We have an error */
++	if (dev->cmd_err & (OMAP_I2C_STAT_AL | OMAP_I2C_STAT_ROVR |
++			    OMAP_I2C_STAT_XUDF)) {
++		omap_i2c_reset(dev);
++		__omap_i2c_init(dev);
++		return -EIO;
++	}
++
++	if (dev->cmd_err & OMAP_I2C_STAT_NACK) {
++		if (msg->flags & I2C_M_IGNORE_NAK)
++			return 0;
++
++		w = omap_i2c_read_reg(dev, OMAP_I2C_CON_REG);
++		w |= OMAP_I2C_CON_STP;
++		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, w);
++		return -EREMOTEIO;
++	}
++	return -EIO;
++}
++
++
++/*
++ * Prepare controller for a transaction and call omap_i2c_xfer_msg
++ * to do the work during IRQ processing.
++ */
++static int
++omap_i2c_xfer(struct rti2c_adapter *adap, struct i2c_msg msgs[], int num)
++{
++	struct omap_i2c_dev *dev = rti2c_get_adapdata(adap);
++	int i;
++	int r;
++
++	r = omap_i2c_wait_for_bb(dev);
++	if (r < 0)
++		goto out;
++
++	if (dev->set_mpu_wkup_lat != NULL)
++		dev->set_mpu_wkup_lat(dev->dev, dev->latency);
++
++	for (i = 0; i < num; i++) {
++		r = omap_i2c_xfer_msg(adap, &msgs[i], (i == (num - 1)));
++		if (r != 0)
++			break;
++	}
++
++	if (r == 0)
++		r = num;
++
++	omap_i2c_wait_for_bb(dev);
++
++	if (dev->set_mpu_wkup_lat != NULL)
++		dev->set_mpu_wkup_lat(dev->dev, -1);
++
++out:
++	return r;
++}
++
++static u32
++omap_i2c_func(struct rti2c_adapter *adap)
++{
++	return I2C_FUNC_I2C | I2C_FUNC_PROTOCOL_MANGLING;
++}
++
++static inline void
++omap_i2c_complete_cmd(struct omap_i2c_dev *dev, u16 err)
++{
++	dev->cmd_err |= err;
++	rtdm_event_signal(&dev->cmd_complete);
++}
++
++static inline void
++omap_i2c_ack_stat(struct omap_i2c_dev *dev, u16 stat)
++{
++	omap_i2c_write_reg(dev, OMAP_I2C_STAT_REG, stat);
++}
++
++static inline void i2c_omap_errata_i207(struct omap_i2c_dev *dev, u16 stat)
++{
++	/*
++	 * I2C Errata(Errata Nos. OMAP2: 1.67, OMAP3: 1.8)
++	 * Not applicable for OMAP4.
++	 * Under certain rare conditions, RDR could be set again
++	 * when the bus is busy, then ignore the interrupt and
++	 * clear the interrupt.
++	 */
++	if (stat & OMAP_I2C_STAT_RDR) {
++		/* Step 1: If RDR is set, clear it */
++		omap_i2c_ack_stat(dev, OMAP_I2C_STAT_RDR);
++
++		/* Step 2: */
++		if (!(omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG)
++						& OMAP_I2C_STAT_BB)) {
++
++			/* Step 3: */
++			if (omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG)
++						& OMAP_I2C_STAT_RDR) {
++				omap_i2c_ack_stat(dev, OMAP_I2C_STAT_RDR);
++				rtdm_printk("omap[d]: RDR when bus is busy.\n");
++			}
++
++		}
++	}
++}
++
++/* rev1 devices are apparently only on some 15xx */
++#ifdef CONFIG_ARCH_OMAP15XX
++
++static int
++omap_i2c_isr(rtdm_irq_t *irq_handle)
++{
++	struct omap_i2c_dev *dev = rtdm_irq_get_arg(irq_handle, struct omap_i2c_dev);
++	u16 iv, w;
++
++
++	iv = omap_i2c_read_reg(dev, OMAP_I2C_IV_REG);
++	switch (iv) {
++	case 0x00:	/* None */
++		break;
++	case 0x01:	/* Arbitration lost */
++		rtdm_printk("omap[e]: Arbitration lost\n");
++		omap_i2c_complete_cmd(dev, OMAP_I2C_STAT_AL);
++		break;
++	case 0x02:	/* No acknowledgement */
++		omap_i2c_complete_cmd(dev, OMAP_I2C_STAT_NACK);
++		omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, OMAP_I2C_CON_STP);
++		break;
++	case 0x03:	/* Register access ready */
++		omap_i2c_complete_cmd(dev, 0);
++		break;
++	case 0x04:	/* Receive data ready */
++		if (dev->buf_len) {
++			w = omap_i2c_read_reg(dev, OMAP_I2C_DATA_REG);
++			*dev->buf++ = w;
++			dev->buf_len--;
++			if (dev->buf_len) {
++				*dev->buf++ = w >> 8;
++				dev->buf_len--;
++			}
++		} else
++			rtdm_printk("omap[e]: RRDY IRQ while no data requested\n");
++		break;
++	case 0x05:	/* Transmit data ready */
++		if (dev->buf_len) {
++			w = *dev->buf++;
++			dev->buf_len--;
++			if (dev->buf_len) {
++				w |= *dev->buf++ << 8;
++				dev->buf_len--;
++			}
++			omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, w);
++		} else
++			rtdm_printk("omap[e]: XRDY IRQ while no data to send\n");
++		break;
++	default:
++		return RTDM_IRQ_NONE;
++	}
++
++	return RTDM_IRQ_HANDLED;
++}
++#else
++#define omap_i2c_omap1_isr		NULL
++#endif
++
++/*
++ * OMAP3430 Errata i462: When an XRDY/XDR is hit, wait for XUDF before writing
++ * data to DATA_REG. Otherwise some data bytes can be lost while transferring
++ * them from the memory to the I2C interface.
++ */
++static int errata_omap3_i462(struct omap_i2c_dev *dev)
++{
++	unsigned long timeout = 10000;
++	u16 stat;
++
++	do {
++		stat = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
++		if (stat & OMAP_I2C_STAT_XUDF)
++			break;
++
++		if (stat & (OMAP_I2C_STAT_NACK | OMAP_I2C_STAT_AL)) {
++			omap_i2c_ack_stat(dev, (OMAP_I2C_STAT_XRDY |
++							OMAP_I2C_STAT_XDR));
++			if (stat & OMAP_I2C_STAT_NACK) {
++				dev->cmd_err |= OMAP_I2C_STAT_NACK;
++				omap_i2c_ack_stat(dev, OMAP_I2C_STAT_NACK);
++			}
++
++			if (stat & OMAP_I2C_STAT_AL) {
++				rtdm_printk("omap[e]: Arbitration lost\n");
++				dev->cmd_err |= OMAP_I2C_STAT_AL;
++				omap_i2c_ack_stat(dev, OMAP_I2C_STAT_AL);
++			}
++
++			return -EIO;
++		}
++
++		cpu_relax();
++	} while (--timeout);
++
++	if (!timeout) {
++		rtdm_printk("omap[e]: timeout waiting on XUDF bit\n");
++		return 0;
++	}
++
++	return 0;
++}
++
++static void omap_i2c_receive_data(struct omap_i2c_dev *dev, u8 num_bytes,
++		bool is_rdr)
++{
++	u16		w;
++
++	while (num_bytes--) {
++		w = omap_i2c_read_reg(dev, OMAP_I2C_DATA_REG);
++		*dev->buf++ = w;
++		dev->buf_len--;
++
++		/*
++		 * Data reg in 2430, omap3 and
++		 * omap4 is 8 bit wide
++		 */
++		if (dev->flags & OMAP_I2C_FLAG_16BIT_DATA_REG) {
++			*dev->buf++ = w >> 8;
++			dev->buf_len--;
++		}
++	}
++}
++
++static int omap_i2c_transmit_data(struct omap_i2c_dev *dev, u8 num_bytes,
++		bool is_xdr)
++{
++	u16		w;
++
++	while (num_bytes--) {
++		w = *dev->buf++;
++		dev->buf_len--;
++
++		/*
++		 * Data reg in 2430, omap3 and
++		 * omap4 is 8 bit wide
++		 */
++		if (dev->flags & OMAP_I2C_FLAG_16BIT_DATA_REG) {
++			w |= *dev->buf++ << 8;
++			dev->buf_len--;
++		}
++
++		if (dev->errata & I2C_OMAP_ERRATA_I462) {
++			int ret;
++
++			ret = errata_omap3_i462(dev);
++			if (ret < 0)
++				return ret;
++		}
++
++		omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, w);
++	}
++
++	return 0;
++}
++
++static int
++omap_i2c_isr(rtdm_irq_t *irq_handle)
++{
++	struct omap_i2c_dev *dev = rtdm_irq_get_arg(irq_handle, struct omap_i2c_dev);
++	//irqreturn_t ret = IRQ_HANDLED;
++	unsigned long flags;
++	u16 bits;
++	u16 mask;
++	u16 stat;
++	int err = 0, count = 0;
++
++	rtdm_lock_get_irqsave(&dev->lock, flags);
++	mask = omap_i2c_read_reg(dev, OMAP_I2C_IE_REG);
++	stat = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
++
++	//if (stat & mask)
++	//	ret = IRQ_WAKE_THREAD;
++
++	/* This was the thread routine */
++
++	do {
++		bits = omap_i2c_read_reg(dev, OMAP_I2C_IE_REG);
++		stat = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
++		stat &= bits;
++
++		/* If we're in receiver mode, ignore XDR/XRDY */
++		if (dev->receiver)
++			stat &= ~(OMAP_I2C_STAT_XDR | OMAP_I2C_STAT_XRDY);
++		else
++			stat &= ~(OMAP_I2C_STAT_RDR | OMAP_I2C_STAT_RRDY);
++
++		if (!stat) {
++			/* my work here is done */
++			goto out;
++		}
++
++		rtdm_printk("omap[d]: IRQ (ISR = 0x%04x)\n", stat);
++		if (count++ == 100) {
++			rtdm_printk("omap[w]: Too much work in one IRQ\n");
++			break;
++		}
++
++		if (stat & OMAP_I2C_STAT_NACK) {
++			err |= OMAP_I2C_STAT_NACK;
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_NACK);
++			break;
++		}
++
++		if (stat & OMAP_I2C_STAT_AL) {
++			rtdm_printk("omap[e]: Arbitration lost\n");
++			err |= OMAP_I2C_STAT_AL;
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_AL);
++			break;
++		}
++
++		/*
++		 * ProDB0017052: Clear ARDY bit twice
++		 */
++		if (stat & OMAP_I2C_STAT_ARDY)
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ARDY);
++
++		if (stat & (OMAP_I2C_STAT_ARDY | OMAP_I2C_STAT_NACK |
++					OMAP_I2C_STAT_AL)) {
++			omap_i2c_ack_stat(dev, (OMAP_I2C_STAT_RRDY |
++						OMAP_I2C_STAT_RDR |
++						OMAP_I2C_STAT_XRDY |
++						OMAP_I2C_STAT_XDR |
++						OMAP_I2C_STAT_ARDY));
++			break;
++		}
++
++		if (stat & OMAP_I2C_STAT_RDR) {
++			u8 num_bytes = 1;
++
++			if (dev->fifo_size)
++				num_bytes = dev->buf_len;
++
++			omap_i2c_receive_data(dev, num_bytes, true);
++
++			if (dev->errata & I2C_OMAP_ERRATA_I207)
++				i2c_omap_errata_i207(dev, stat);
++
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_RDR);
++			continue;
++		}
++
++		if (stat & OMAP_I2C_STAT_RRDY) {
++			u8 num_bytes = 1;
++
++			if (dev->threshold)
++				num_bytes = dev->threshold;
++
++			omap_i2c_receive_data(dev, num_bytes, false);
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_RRDY);
++			continue;
++		}
++
++		if (stat & OMAP_I2C_STAT_XDR) {
++			u8 num_bytes = 1;
++			int ret;
++
++			if (dev->fifo_size)
++				num_bytes = dev->buf_len;
++
++			ret = omap_i2c_transmit_data(dev, num_bytes, true);
++			if (ret < 0)
++				break;
++
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_XDR);
++			continue;
++		}
++
++		if (stat & OMAP_I2C_STAT_XRDY) {
++			u8 num_bytes = 1;
++			int ret;
++
++			if (dev->threshold)
++				num_bytes = dev->threshold;
++
++			ret = omap_i2c_transmit_data(dev, num_bytes, false);
++			if (ret < 0)
++				break;
++
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_XRDY);
++			continue;
++		}
++
++		if (stat & OMAP_I2C_STAT_ROVR) {
++			rtdm_printk("omap[e]: Receive overrun\n");
++			err |= OMAP_I2C_STAT_ROVR;
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_ROVR);
++			break;
++		}
++
++		if (stat & OMAP_I2C_STAT_XUDF) {
++			rtdm_printk("omap[e]: Transmit underflow\n");
++			err |= OMAP_I2C_STAT_XUDF;
++			omap_i2c_ack_stat(dev, OMAP_I2C_STAT_XUDF);
++			break;
++		}
++	} while (stat);
++
++	omap_i2c_complete_cmd(dev, err);
++
++out:
++	rtdm_lock_put_irqrestore(&dev->lock, flags);
++
++	return RTDM_IRQ_HANDLED;	
++}
++
++static const struct rti2c_algorithm omap_i2c_algo = {
++	.master_xfer	= omap_i2c_xfer,
++	.functionality	= omap_i2c_func,
++};
++
++#ifdef CONFIG_OF
++static struct omap_i2c_bus_platform_data omap2420_pdata = {
++	.rev = OMAP_I2C_IP_VERSION_1,
++	.flags = OMAP_I2C_FLAG_NO_FIFO |
++			OMAP_I2C_FLAG_SIMPLE_CLOCK |
++			OMAP_I2C_FLAG_16BIT_DATA_REG |
++			OMAP_I2C_FLAG_BUS_SHIFT_2,
++};
++
++static struct omap_i2c_bus_platform_data omap2430_pdata = {
++	.rev = OMAP_I2C_IP_VERSION_1,
++	.flags = OMAP_I2C_FLAG_BUS_SHIFT_2 |
++			OMAP_I2C_FLAG_FORCE_19200_INT_CLK,
++};
++
++static struct omap_i2c_bus_platform_data omap3_pdata = {
++	.rev = OMAP_I2C_IP_VERSION_1,
++	.flags = OMAP_I2C_FLAG_BUS_SHIFT_2,
++};
++
++static struct omap_i2c_bus_platform_data omap4_pdata = {
++	.rev = OMAP_I2C_IP_VERSION_2,
++};
++
++static const struct of_device_id omap_i2c_of_match[] = {
++	{
++		.compatible = "ti,omap4-i2c",
++		.data = &omap4_pdata,
++	},
++	{
++		.compatible = "ti,omap3-i2c",
++		.data = &omap3_pdata,
++	},
++	{
++		.compatible = "ti,omap2430-i2c",
++		.data = &omap2430_pdata,
++	},
++	{
++		.compatible = "ti,omap2420-i2c",
++		.data = &omap2420_pdata,
++	},
++	{ },
++};
++MODULE_DEVICE_TABLE(of, omap_i2c_of_match);
++#endif
++
++#define OMAP_I2C_SCHEME(rev)		((rev & 0xc000) >> 14)
++
++#define OMAP_I2C_REV_SCHEME_0_MAJOR(rev) (rev >> 4)
++#define OMAP_I2C_REV_SCHEME_0_MINOR(rev) (rev & 0xf)
++
++#define OMAP_I2C_REV_SCHEME_1_MAJOR(rev) ((rev & 0x0700) >> 7)
++#define OMAP_I2C_REV_SCHEME_1_MINOR(rev) (rev & 0x1f)
++#define OMAP_I2C_SCHEME_0		0
++#define OMAP_I2C_SCHEME_1		1
++
++static int
++omap_i2c_probe(struct platform_device *pdev)
++{
++	struct omap_i2c_dev	*dev;
++	struct rti2c_adapter	*adap;
++	struct resource		*mem;
++	const struct omap_i2c_bus_platform_data *pdata =
++		dev_get_platdata(&pdev->dev);
++	struct device_node	*node = pdev->dev.of_node;
++	const struct of_device_id *match;
++	int irq;
++	int r;
++	u32 rev;
++	u16 minor, major;
++
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0) {
++		rtdm_printk("omap[e]:  no irq resource?\n");
++		return irq;
++	}
++
++	dev = rtdm_malloc(sizeof(struct omap_i2c_dev));
++	if (!dev) {
++		rtdm_printk("omap[e]:  Menory allocation failed\n");
++		return -ENOMEM;
++	}
++	memset(dev, 0, sizeof(struct omap_i2c_dev));
++
++	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	dev->base = devm_ioremap_resource(&pdev->dev, mem);
++	/* dev->base = ioremap(&pdev->dev, mem); FIXME*/ 
++	if (IS_ERR(dev->base))
++		return PTR_ERR(dev->base);
++
++	match = of_match_device(of_match_ptr(omap_i2c_of_match), &pdev->dev);
++	if (match) {
++		u32 freq = 100000; /* default to 100000 Hz */
++
++		pdata = match->data;
++		dev->flags = pdata->flags;
++
++		of_property_read_u32(node, "clock-frequency", &freq);
++		/* convert DT freq value in Hz into kHz for speed */
++		dev->speed = freq / 1000;
++	} else if (pdata != NULL) {
++		dev->speed = pdata->clkrate;
++		dev->flags = pdata->flags;
++		dev->set_mpu_wkup_lat = pdata->set_mpu_wkup_lat;
++	}
++
++	dev->dev = &pdev->dev;
++	dev->irq = irq;
++
++	rtdm_lock_init(&dev->lock);
++
++	platform_set_drvdata(pdev, dev);
++	rtdm_event_init(&dev->cmd_complete, 0);
++
++
++	dev->reg_shift = (dev->flags >> OMAP_I2C_FLAG_BUS_SHIFT__SHIFT) & 3;
++
++	pm_runtime_enable(dev->dev);
++	pm_runtime_dont_use_autosuspend(dev->dev);
++
++	r = pm_runtime_get_sync(dev->dev);
++	if (IS_ERR_VALUE(r))
++		goto err_free_mem;
++
++	/*
++	 * Read the Rev hi bit-[15:14] ie scheme this is 1 indicates ver2.
++	 * On omap1/3/2 Offset 4 is IE Reg the bit [15:14] is 0 at reset.
++	 * Also since the omap_i2c_read_reg uses reg_map_ip_* a
++	 * readw_relaxed is done.
++	 */
++	rev = readw_relaxed(dev->base + 0x04);
++
++	dev->scheme = OMAP_I2C_SCHEME(rev);
++	switch (dev->scheme) {
++	case OMAP_I2C_SCHEME_0:
++		dev->regs = (u8 *)reg_map_ip_v1;
++		dev->rev = omap_i2c_read_reg(dev, OMAP_I2C_REV_REG);
++		minor = OMAP_I2C_REV_SCHEME_0_MAJOR(dev->rev);
++		major = OMAP_I2C_REV_SCHEME_0_MAJOR(dev->rev);
++		break;
++	case OMAP_I2C_SCHEME_1:
++		/* FALLTHROUGH */
++	default:
++		dev->regs = (u8 *)reg_map_ip_v2;
++		rev = (rev << 16) |
++			omap_i2c_read_reg(dev, OMAP_I2C_IP_V2_REVNB_LO);
++		minor = OMAP_I2C_REV_SCHEME_1_MINOR(rev);
++		major = OMAP_I2C_REV_SCHEME_1_MAJOR(rev);
++		dev->rev = rev;
++	}
++
++	dev->errata = 0;
++
++	if (dev->rev >= OMAP_I2C_REV_ON_2430 &&
++			dev->rev < OMAP_I2C_REV_ON_4430_PLUS)
++		dev->errata |= I2C_OMAP_ERRATA_I207;
++
++	if (dev->rev <= OMAP_I2C_REV_ON_3430_3530)
++		dev->errata |= I2C_OMAP_ERRATA_I462;
++
++	if (!(dev->flags & OMAP_I2C_FLAG_NO_FIFO)) {
++		u16 s;
++
++		/* Set up the fifo size - Get total size */
++		s = (omap_i2c_read_reg(dev, OMAP_I2C_BUFSTAT_REG) >> 14) & 0x3;
++		dev->fifo_size = 0x8 << s;
++
++		/*
++		 * Set up notification threshold as half the total available
++		 * size. This is to ensure that we can handle the status on int
++		 * call back latencies.
++		 */
++
++		dev->fifo_size = (dev->fifo_size / 2);
++
++		if (dev->rev < OMAP_I2C_REV_ON_3630)
++			dev->b_hw = 1; /* Enable hardware fixes */
++
++		/* calculate wakeup latency constraint for MPU */
++		if (dev->set_mpu_wkup_lat != NULL)
++			dev->latency = (1000000 * dev->fifo_size) /
++				       (1000 * dev->speed / 8);
++	}
++
++	/* reset ASAP, clearing any IRQs */
++	omap_i2c_init(dev);
++
++	if (dev->rev < OMAP_I2C_OMAP1_REV_2)
++		r = rtdm_irq_request(&dev->irq_handle, dev->irq, omap_i2c_omap1_isr,
++				0, pdev->name, dev);
++	else
++		r = rtdm_irq_request(&dev->irq_handle, dev->irq, omap_i2c_isr,
++				0, pdev->name, dev);
++/* 		no threaded irq in rtdm yet...
++		r = devm_request_threaded_irq(&pdev->dev, dev->irq,
++				omap_i2c_isr, omap_i2c_isr_thread,
++				0 | IRQF_ONESHOT,
++				pdev->name, dev);
++*/
++	if (r) {
++		rtdm_printk("omap[e]: failure requesting irq %i\n", dev->irq);
++		goto err_unuse_clocks;
++	}
++
++	adap = &dev->adapter;
++	rti2c_set_adapdata(adap, dev);
++	adap->owner = THIS_MODULE;
++	adap->class = I2C_CLASS_HWMON;
++	strlcpy(adap->name, "OMAP I2C adapter", sizeof(adap->name));
++	adap->algo = &omap_i2c_algo;
++	//adap->dev.parent = &pdev->dev;
++	adap->of_node = pdev->dev.of_node;
++
++	/* i2c device drivers may be active on return from add_adapter() */
++	adap->nr = pdev->id;
++	r = rti2c_add_numbered_adapter(adap);
++	if (r) {
++		rtdm_printk("omap[e]: failure adding adapter\n");
++		goto err_unuse_clocks;
++	}
++
++	dev_info(dev->dev, "bus %d rev%d.%d at %d kHz\n", adap->nr,
++	         major, minor, dev->speed);
++	 
++	return 0;
++
++err_unuse_clocks:
++	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, 0);
++	pm_runtime_put(dev->dev);
++	pm_runtime_disable(&pdev->dev);
++err_free_mem:
++
++	return r;
++}
++
++static int omap_i2c_remove(struct platform_device *pdev)
++{
++	struct omap_i2c_dev	*dev = platform_get_drvdata(pdev);
++
++	rti2c_del_adapter(&dev->adapter);
++
++	rtdm_irq_free(&dev->irq_handle);
++
++	omap_i2c_write_reg(dev, OMAP_I2C_CON_REG, 0);
++
++	pm_runtime_put(&pdev->dev);
++	pm_runtime_disable(&pdev->dev);
++
++	rtdm_event_destroy(&dev->cmd_complete);
++	
++	devm_iounmap(&pdev->dev, dev->base);
++
++	rtdm_free(dev);
++
++	return 0;
++}
++
++static struct platform_driver omap_i2c_driver = {
++	.probe		= omap_i2c_probe,
++	.remove		= omap_i2c_remove,
++	.driver		= {
++		.name	= "omap_rti2c",
++		.owner	= THIS_MODULE,
++		.pm	= NULL,
++		.of_match_table = of_match_ptr(omap_i2c_of_match),
++	},
++};
++
++/* I2C may be needed to bring up other drivers */
++static int __init
++omap_i2c_init_driver(void)
++{
++	return platform_driver_register(&omap_i2c_driver);
++}
++module_init(omap_i2c_init_driver);
++
++static void __exit omap_i2c_exit_driver(void)
++{
++	platform_driver_unregister(&omap_i2c_driver);
++}
++module_exit(omap_i2c_exit_driver);
++
++MODULE_AUTHOR("MontaVista Software, Inc. (and others)");
++MODULE_DESCRIPTION("TI OMAP I2C bus adapter");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:omap_i2c");
+diff --git a/ksrc/drivers/i2c/rti2c.h b/ksrc/drivers/i2c/rti2c.h
+new file mode 100644
+index 0000000..2380724
+--- /dev/null
++++ b/ksrc/drivers/i2c/rti2c.h
+@@ -0,0 +1,101 @@
++/*
++ * Copyright (C) 2014 Matthias Schneider <ma30002000@yahoo.de>
++ * 
++ * Xenomai is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * Xenomai is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with Xenomai; if not, write to the Free Software Foundation,
++ * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#include <linux/i2c.h>
++#include <rtdm/rtdm_driver.h>
++
++#define MAX_I2C_MSG_LEN 8192
++
++/* external */
++#define MS_TO_NS(msec)		((nanosecs_abs_t)(msec) * 1000 * 1000)
++#define time_after_ns(a,b)		\
++	(typecheck(nanosecs_abs_t, a) && \
++	 typecheck(nanosecs_abs_t, b) && \
++	 ((nanosecs_rel_t)((b) - (a)) < 0))
++
++struct rti2c_adapter;
++
++struct rti2c_heaps {
++	rtdm_mutex_t mutex;
++	struct i2c_msg* msgs;
++	u8* msgs_data;
++	u8* __user * msgs_buf;
++};
++
++struct rti2c_algorithm {
++	/* master_xfer should return the number of messages successfully
++	   processed, or a negative value on error */
++	int (*master_xfer)(struct rti2c_adapter *adap, struct i2c_msg *msgs,
++			   int num);
++
++	/* To determine what the adapter supports */
++	u32 (*functionality) (struct rti2c_adapter *);
++};
++
++struct rti2c_adapter {
++	struct module *owner;
++	unsigned int class;		  /* classes to allow probing for */
++	const struct rti2c_algorithm *algo; /* the algorithm to access the bus */
++	void *algo_data;
++	void *driver_data;
++
++	struct device_node *of_node; /* associated device tree node */
++	int nr;
++	char name[48];
++	struct device dev;
++	/* data fields that are valid for all devices	*/
++	rtdm_mutex_t bus_lock;
++	struct rtdm_device* rtdm_dev;
++
++	nanosecs_abs_t timeout_ns;	/* in ns */
++	int retries;
++};
++#define to_rti2c_adapter(d) container_of(d, struct rti2c_adapter, dev)
++
++static inline void *rti2c_get_adapdata(const struct rti2c_adapter *adap)
++{
++	if (!adap)
++		return NULL;
++	return adap->driver_data;
++}
++
++static inline void rti2c_set_adapdata(struct rti2c_adapter *adap, void *data)
++{
++	if (adap)
++		adap->driver_data = data;
++}
++
++struct rti2c_client {
++	unsigned short flags;		/* div., see below		*/
++	unsigned short addr;		/* chip address - NOTE: 7bit	*/
++					/* addresses are stored in the	*/
++					/* _LOWER_ 7 bits		*/
++	char name[I2C_NAME_SIZE];
++	struct rti2c_adapter *adapter;	/* the adapter we sit on	*/
++	struct device dev;		/* the device structure		*/
++	int irq;			/* irq issued by device		*/
++	struct rti2c_config cfg;
++	struct rti2c_heaps heaps;
++	struct list_head detected;
++};
++#define to_rti2c_client(d) container_of(d, struct rti2c_client, dev)
++
++void rti2c_del_adapter(struct rti2c_adapter *adap);
++int rti2c_add_adapter(struct rti2c_adapter *adapter);
++int rti2c_add_numbered_adapter(struct rti2c_adapter *adap);
++
+diff --git a/scripts/build.sh b/scripts/build.sh
+new file mode 100755
+index 0000000..8fd7213
+--- /dev/null
++++ b/scripts/build.sh
+@@ -0,0 +1,140 @@
++#!/bin/bash
++set -e
++
++#Setup common variables
++export ARCH=arm
++if [ -n "`echo ${LICHEE_CHIP} | grep "sun5[0-9]i"`" ] && \
++	[ "x${LICHEE_ARCH}" = "xarm64" ]; then
++    export ARCH=arm64
++fi
++
++#export CROSS_COMPILE=${ARCH}-linux-gnueabi-
++if [ -n "${LICHEE_TOOLCHAIN_PATH}" \
++	-a -d "${LICHEE_TOOLCHAIN_PATH}" ]; then
++    GCC=$(find ${LICHEE_TOOLCHAIN_PATH} -perm /a+x -a -regex '.*-gcc');
++    export CROSS_COMPILE="${GCC%-*}-";
++elif [ -n "${LICHEE_CROSS_COMPILER}" ]; then
++    export CROSS_COMPILE="${LICHEE_CROSS_COMPILER}-"
++fi
++
++export LICHEE_CROSS_COMPILER=${LICHEE_BR_OUT}/external-toolchain/bin
++export CROSS_COMPILE=${LICHEE_CROSS_COMPILER}/${ARCH}-linux-gnueabi-
++
++echo ----$CROSS_COMPILE
++echo ---${LICHEE_TOOLCHAIN_PATH}
++export AS=${CROSS_COMPILE}as
++export LD=${CROSS_COMPILE}ld
++export CC=${CROSS_COMPILE}gcc
++export AR=${CROSS_COMPILE}ar
++export NM=${CROSS_COMPILE}nm
++export STRIP=${CROSS_COMPILE}strip
++export OBJCOPY=${CROSS_COMPILE}objcopy
++export OBJDUMP=${CROSS_COMPILE}objdump
++
++XENO_DIR=`pwd`
++export XENO_DIR
++
++export XENO_CONFIG=${LICHEE_BR_OUT}/staging/usr/xenomai/bin/xeno-config
++export KDIR=${LICHEE_KERN_DIR}
++export XENO_INCLUDE=${LICHEE_BR_OUT}/staging/usr/xenomai/include
++export XENO_LDLIB=${LICHEE_BR_OUT}/staging/usr/xenomai/lib
++
++show_help()
++{
++    printf "
++    Build script for xenomai
++
++    Invalid Options:
++
++    help					- show this help
++    config_xenomai			- config xenomai
++    build_xenomai			- build kernel module in modules dir
++    clean_xenomai			- clean kernel and modules
++
++    "
++}
++
++config_xenomai()
++{
++    echo "Config xenomai"
++	./configure CROSS_COMPILE=$CROSS_COMPILE CC=$CC LD=$LD CFLAGS="-march=armv7-a -mfpu=vfp3" LDFLAGS="-march=armv7-a -mfpu=vfp3" --build=i686-pc-linux-gnu --host=arm-linux-gnueabi
++}
++
++build_xenomai()
++{
++    echo "make and install xenomai"
++	if [ -d ${LICHEE_BR_OUT}/target ]; then
++		make DESTDIR=${LICHEE_BR_OUT}/target/ install
++	fi
++	if [ -d ${LICHEE_BR_OUT}/staging/usr/xenomai ]; then
++		rm -rf ${LICHEE_BR_OUT}/staging/usr/xenomai
++	fi
++	if [ -d ${LICHEE_BR_OUT}/staging ]; then
++		cp -af ${LICHEE_BR_OUT}/target/usr/xenomai ${LICHEE_BR_OUT}/staging/usr/
++	fi
++
++	if [ -d ${LICHEE_BR_OUT}/target/usr/xenomai/share ]; then
++		rm -rf ${LICHEE_BR_OUT}/target/usr/xenomai/share
++		rm -rf ${LICHEE_BR_OUT}/target/usr/xenomai/include
++		rm -rf ${LICHEE_BR_OUT}/target/usr/xenomai/lib/*.a
++		rm -rf ${LICHEE_BR_OUT}/target/usr/xenomai/lib/*.la
++	fi
++}
++
++build_xeno_app()
++{
++	echo "Build xenomai user app ...."
++	if [ -d ${LICHEE_BR_OUT}/staging/usr/xenomai ]; then
++		if [ -d ${XENO_DIR}/../xenomai_example ]; then
++			make -C ${XENO_DIR}/../xenomai_example/xenomai clean
++			make -C ${XENO_DIR}/../xenomai_example/xenomai
++			cp -af ${XENO_DIR}/../xenomai_example/xenomai/rtdm_hello/*.ko ${LICHEE_BR_OUT}/target/lib/modules/3.4.39/
++			cp -af ${XENO_DIR}/../xenomai_example/xenomai/heartbeat/*.ko ${LICHEE_BR_OUT}/target/lib/modules/3.4.39/
++			cp -af ${XENO_DIR}/../xenomai_example/xenomai/gpio_irq_rtdm/*.ko ${LICHEE_BR_OUT}/target//lib/modules/3.4.39/
++			cp -af ${XENO_DIR}/../xenomai_example/xenomai/i2c_rtdm/i2c_test ${LICHEE_BR_OUT}/target//usr/bin/
++		fi
++	fi
++	
++}
++
++clean_xenomai()
++{
++	echo "Cleaning xenomai ..."
++	if [ -d ${LICHEE_BR_OUT}/target/usr/xenomai ]; then
++		rm -rf ${LICHEE_BR_OUT}/target/usr/xenomai
++	fi
++	echo
++}
++
++
++#####################################################################
++#
++#                      Main Runtine
++#
++#####################################################################
++
++#LICHEE_ROOT=`(cd ${LICHEE_KDIR}/..; pwd)`
++#export PATH=${LICHEE_ROOT}/buildroot/output/external-toolchain/bin:${LICHEE_ROOT}/tools/pack/pctools/linux/android:$PATH
++#if [ x$2 = x ];then
++#	echo Error! you show pass chip name as param 2
++#	exit 1
++#else
++#	chip_name=$2
++#	platform_name=${chip_name:0:5}
++#fi
++
++case "$1" in
++	config)
++        config_xenomai
++        ;;
++    clean)
++        clean_xenomai
++        ;;
++    *)
++        config_xenomai
++        build_xenomai
++        echo -e "\n\033[0;31;1m${XENO_DIR} compile xenomai successful\033[0m\n\n"
++        build_xeno_app
++        ;;
++esac
++
+-- 
+1.7.9.5
+

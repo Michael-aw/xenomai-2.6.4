@@ -1,0 +1,42 @@
+From fef7d19291a6afd0d44588cc9c4cc1405b5f0fec Mon Sep 17 00:00:00 2001
+From: xielinfei <xielinfei@allwinnertech.com>
+Date: Fri, 17 Feb 2017 15:42:17 +0800
+Subject: [PATCH 1/2] compile: remove sudo request for xenomai
+
+Signed-off-by: xielinfei <xielinfei@allwinnertech.com>
+---
+ Makefile.am |    4 ++--
+ Makefile.in |    3 ++-
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index d3747eb..eb04faf 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -1,7 +1,7 @@
+ ACLOCAL_AMFLAGS=-I config
+ 
+-SUDO=sudo
+-
++#SUDO=sudo
++SUDO=../out/sun8iw8p1/linux/common/buildroot/host/usr/bin/fakeroot
+ SUBDIRS = src include config @XENO_MAYBE_DOCDIR@ scripts
+ 
+ EXTRA_DIST = CREDITS README.INSTALL TROUBLESHOOTING ksrc examples debian
+diff --git a/Makefile.in b/Makefile.in
+index b21702f..825ec75 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -287,7 +287,8 @@ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+ ACLOCAL_AMFLAGS = -I config
+-SUDO = sudo
++#SUDO = sudo
++SUDO=../out/sun8iw8p1/linux/common/buildroot/host/usr/bin/fakeroot
+ SUBDIRS = src include config @XENO_MAYBE_DOCDIR@ scripts
+ EXTRA_DIST = CREDITS README.INSTALL TROUBLESHOOTING ksrc examples debian
+ all: all-recursive
+-- 
+1.7.9.5
+
